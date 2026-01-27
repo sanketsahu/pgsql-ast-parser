@@ -606,6 +606,15 @@ export class AstDefaultMapper implements IAstMapper {
             case 'primary key':
             case 'unique':
             case 'add generated':
+                if (c.type === 'add generated' && c.expression) {
+                    const expression = this.expr(c.expression);
+                    if (!expression) {
+                        return null;
+                    }
+                    return assignChanged(c, {
+                        expression,
+                    });
+                }
                 return c;
             case 'default': {
                 const def = this.expr(c.default);

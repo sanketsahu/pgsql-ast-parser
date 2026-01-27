@@ -159,7 +159,14 @@ function visitGenerated(m: IAstVisitor, alter: AlterColumnAddGenerated) {
     if (alter.always) {
         ret.push(alter.always.toUpperCase(), ' ');
     }
-    ret.push('AS IDENTITY ');
+    ret.push('AS ');
+    if (alter.expression) {
+        ret.push('(');
+        m.expr(alter.expression);
+        ret.push(') ');
+    } else {
+        ret.push('IDENTITY ');
+    }
     if (alter.sequence) {
         ret.push('(');
         if (alter.sequence.name) {
@@ -169,6 +176,9 @@ function visitGenerated(m: IAstVisitor, alter: AlterColumnAddGenerated) {
         }
         visitSeqOpts(m, alter.sequence);
         ret.push(') ');
+    }
+    if (alter.stored) {
+        ret.push('STORED ');
     }
 }
 function visitSeqOpts(m: IAstVisitor, cs: AlterSequenceSetOptions | CreateSequenceOptions) {

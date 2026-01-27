@@ -387,6 +387,8 @@ export interface AlterColumnSetDefault extends PGNode {
 export interface AlterColumnAddGenerated extends PGNode {
     type: 'add generated',
     always?: 'always' | 'by default';
+    expression?: Expr;
+    stored?: true;
     constraintName?: Name;
     sequence?: {
         name?: QName;
@@ -680,7 +682,7 @@ export interface ForStatement extends PGNode {
 }
 
 export interface SkipClause extends PGNode {
-    type: 'nowait' | 'skip locked' 
+    type: 'nowait' | 'skip locked'
 }
 
 export interface LimitStatement extends PGNode {
