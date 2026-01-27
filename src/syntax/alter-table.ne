@@ -100,11 +100,16 @@ altercol_generated_add -> kw_add altercol_generated {% last %}
 altercol_generated
     -> kw_generated
         (kw_always | kw_by %kw_default):?
-        (%kw_as kw_identity )
-        (lparen altercol_generated_seq rparen {% get(1) %}):? {% x => track(x, {
+        (%kw_as kw_identity):?
+        (%kw_as lparen expr rparen {% get(2) %}):?
+        (lparen altercol_generated_seq rparen {% get(1) %}):?
+        (kw_stored):?
+        {% x => track(x, {
             type: 'add generated',
             ...x[1] && { always: toStr(x[1], ' ') },
-            ...x[3] && { sequence: unwrap(x[3]) },
+            ...x[3] && { expression: unwrap(x[3]) },
+            ...x[4] && { sequence: unwrap(x[4]) },
+            ...x[5] && { stored: true },
         }) %}
 
 altercol_generated_seq

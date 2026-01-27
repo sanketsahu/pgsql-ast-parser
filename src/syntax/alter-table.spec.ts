@@ -454,4 +454,23 @@ describe('Alter table', () => {
             behaviour: 'restrict',
         }],
     });
+
+    checkAlterTable([`alter table test add column b text generated always as (a + 'x') stored`], {
+        type: 'alter table',
+        table: { name: 'test' },
+        changes: [{
+            type: 'add column',
+            column: {
+                kind: 'column',
+                name: { name: 'b' },
+                dataType: { name: 'text' },
+                constraints: [{
+                    type: 'add generated',
+                    always: 'always',
+                    expression: { type: 'binary', left: { type: 'ref', name: 'a' }, op: '+', right: { type: 'string', value: 'x' } },
+                    stored: true,
+                }]
+            },
+        }],
+    })
 });
