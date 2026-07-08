@@ -202,6 +202,13 @@ kw_revoke -> %word {% notReservedKw('revoke')  %}
 kw_privileges -> %word {% notReservedKw('privileges')  %}
 kw_usage -> %word {% notReservedKw('usage')  %}
 kw_execute -> %word {% notReservedKw('execute')  %}
+kw_before -> %word {% notReservedKw('before')  %}
+kw_after -> %word {% notReservedKw('after')  %}
+kw_instead -> %word {% notReservedKw('instead')  %}
+kw_of -> %word {% notReservedKw('of')  %}
+kw_each -> %word {% notReservedKw('each')  %}
+kw_statement -> %word {% notReservedKw('statement')  %}
+kw_procedure -> %word {% notReservedKw('procedure')  %}
 kw_connect -> %word {% notReservedKw('connect')  %}
 kw_deferred -> %word {% notReservedKw('deferred')  %}
 kw_immediate -> %word {% notReservedKw('immediate')  %}

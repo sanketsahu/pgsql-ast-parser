@@ -13,6 +13,7 @@ import {lexerAny} from '../lexer';
 @include "create-role.ne"
 @include "policy.ne"
 @include "grant.ne"
+@include "create-trigger.ne"
 @include "simple-statements.ne"
 @include "insert.ne"
 @include "update.ne"
@@ -56,6 +57,7 @@ statement_noprep
     | droppolicy_statement
     | grant_statement
     | revoke_statement
+    | createtrigger_statement
     | createindex_statement
     | simplestatements_all
     | insert_statement

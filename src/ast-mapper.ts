@@ -90,6 +90,7 @@ export interface IAstPartialMapper {
     reset?(val: a.ResetStatement): a.Statement | nil
     createPolicy?(val: a.CreatePolicyStatement): a.Statement | nil
     dropPolicy?(val: a.DropPolicyStatement): a.Statement | nil
+    createTrigger?(val: a.CreateTriggerStatement): a.Statement | nil
     grant?(val: a.GrantStatement): a.Statement | nil
     revoke?(val: a.RevokeStatement): a.Statement | nil
     setGlobal?(val: a.SetGlobalStatement): a.Statement | nil
@@ -274,6 +275,8 @@ export class AstDefaultMapper implements IAstMapper {
                 return this.createPolicy(val);
             case 'drop policy':
                 return this.dropPolicy(val);
+            case 'create trigger':
+                return this.createTrigger(val);
             case 'grant':
                 return this.grant(val);
             case 'revoke':
@@ -444,6 +447,12 @@ export class AstDefaultMapper implements IAstMapper {
 
     dropPolicy(val: a.DropPolicyStatement): a.Statement | nil {
         return val;
+    }
+
+    createTrigger(val: a.CreateTriggerStatement): a.Statement | nil {
+        const when = this.expr(val.when);
+        const args = arrayNilMap(val.execute.arguments, a => this.expr(a));
+        return assignChanged(val, { when, execute: assignChanged(val.execute, { arguments: args }) });
     }
 
     grant(val: a.GrantStatement): a.Statement | nil {
