@@ -170,6 +170,8 @@ kw_privileges -> %word {% notReservedKw('privileges')  %}
 kw_usage -> %word {% notReservedKw('usage')  %}
 kw_execute -> %word {% notReservedKw('execute')  %}
 kw_connect -> %word {% notReservedKw('connect')  %}
+kw_deferred -> %word {% notReservedKw('deferred')  %}
+kw_immediate -> %word {% notReservedKw('immediate')  %}
 kw_serializable -> %word {% notReservedKw('serializable')  %}
 kw_rollback -> %word {% notReservedKw('rollback')  %}
 kw_insert -> %word {% notReservedKw('insert')  %}

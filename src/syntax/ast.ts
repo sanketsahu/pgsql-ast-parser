@@ -621,6 +621,8 @@ export interface TableReference {
     onDelete?: ConstraintAction;
     onUpdate?: ConstraintAction;
     match?: 'full' | 'partial' | 'simple';
+    deferrable?: boolean;
+    initiallyDeferred?: boolean;
 }
 
 

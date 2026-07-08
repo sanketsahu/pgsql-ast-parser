@@ -106,6 +106,8 @@ createtable_constraint_foreignkey_onsometing
      -> %kw_on kw_delete createtable_constraint_on_action {% x => track(x, {onDelete:  last(x)}) %}
      | %kw_on kw_update createtable_constraint_on_action {% x => track(x, {onUpdate: last(x)}) %}
      | kw_match (%kw_full | kw_partial | kw_simple) {% x => track(x, {match: toStr(last(x))}) %}
+     | %kw_not:? %kw_deferrable {% x => track(x, {deferrable: !x[0]}) %}
+     | %kw_initially (kw_deferred | kw_immediate) {% x => track(x, {initiallyDeferred: toStr(last(x)).toLowerCase() === 'deferred'}) %}
 
 createtable_constraint_on_action
     -> (kw_cascade

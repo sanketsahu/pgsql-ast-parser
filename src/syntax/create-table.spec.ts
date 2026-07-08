@@ -759,3 +759,21 @@ describe('Create table', () => {
         ]
     })
 });
+describe('Create table (deferrable FK)', () => {
+    checkCreateTable([`create table b (id int references a(id) deferrable initially deferred)`], {
+        type: 'create table',
+        name: { name: 'b' },
+        columns: [{
+            kind: 'column',
+            name: { name: 'id' },
+            dataType: { name: 'int' },
+            constraints: [{
+                type: 'reference',
+                foreignTable: { name: 'a' },
+                foreignColumns: [{ name: 'id' }],
+                deferrable: true,
+                initiallyDeferred: true,
+            }],
+        }],
+    });
+});

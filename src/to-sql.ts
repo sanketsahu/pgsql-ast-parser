@@ -70,6 +70,12 @@ function addConstraint(c: ColumnConstraint | TableConstraint, m: IAstVisitor) {
             if (c.onUpdate) {
                 ret.push(' ON UPDATE ', c.onUpdate);
             }
+            if (c.deferrable !== undefined) {
+                ret.push(c.deferrable ? ' DEFERRABLE' : ' NOT DEFERRABLE');
+            }
+            if (c.initiallyDeferred !== undefined) {
+                ret.push(' INITIALLY ', c.initiallyDeferred ? 'DEFERRED' : 'IMMEDIATE');
+            }
             break;
         case 'primary key':
         case 'unique':
