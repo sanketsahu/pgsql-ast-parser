@@ -90,6 +90,8 @@ export interface IAstPartialMapper {
     reset?(val: a.ResetStatement): a.Statement | nil
     createPolicy?(val: a.CreatePolicyStatement): a.Statement | nil
     dropPolicy?(val: a.DropPolicyStatement): a.Statement | nil
+    grant?(val: a.GrantStatement): a.Statement | nil
+    revoke?(val: a.RevokeStatement): a.Statement | nil
     setGlobal?(val: a.SetGlobalStatement): a.Statement | nil
     setTimezone?(val: a.SetTimezone): a.Statement | nil
     setNames?(val: a.SetNames): a.Statement | nil
@@ -272,6 +274,10 @@ export class AstDefaultMapper implements IAstMapper {
                 return this.createPolicy(val);
             case 'drop policy':
                 return this.dropPolicy(val);
+            case 'grant':
+                return this.grant(val);
+            case 'revoke':
+                return this.revoke(val);
             case 'create sequence':
                 return this.createSequence(val);
             case 'alter sequence':
@@ -437,6 +443,14 @@ export class AstDefaultMapper implements IAstMapper {
     }
 
     dropPolicy(val: a.DropPolicyStatement): a.Statement | nil {
+        return val;
+    }
+
+    grant(val: a.GrantStatement): a.Statement | nil {
+        return val;
+    }
+
+    revoke(val: a.RevokeStatement): a.Statement | nil {
         return val;
     }
 

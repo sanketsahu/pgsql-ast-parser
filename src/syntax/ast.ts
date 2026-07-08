@@ -40,6 +40,8 @@ export type Statement = SelectStatement
     | ResetStatement
     | CreatePolicyStatement
     | DropPolicyStatement
+    | GrantStatement
+    | RevokeStatement
     | CreateEnumType
     | CreateCompositeType
     | AlterEnumType
@@ -1099,6 +1101,27 @@ export interface DropPolicyStatement extends PGNode {
     name: Name;
     table: QName;
     ifExists?: boolean;
+}
+
+export interface GrantOnTarget extends PGNode {
+    type: 'table';
+    names: QName[];
+}
+
+export interface GrantStatement extends PGNode {
+    type: 'grant';
+    privileges: 'all' | string[];
+    on: GrantOnTarget;
+    to: Name[];
+    withGrantOption?: boolean;
+}
+
+export interface RevokeStatement extends PGNode {
+    type: 'revoke';
+    privileges: 'all' | string[];
+    on: GrantOnTarget;
+    from: Name[];
+    grantOptionFor?: boolean;
 }
 export interface SetTimezone extends PGNode {
     type: 'set timezone',

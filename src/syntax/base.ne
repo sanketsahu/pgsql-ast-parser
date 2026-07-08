@@ -165,6 +165,11 @@ kw_security -> %word {% notReservedKw('security')  %}
 kw_enable -> %word {% notReservedKw('enable')  %}
 kw_disable -> %word {% notReservedKw('disable')  %}
 kw_public -> %word {% notReservedKw('public')  %}
+kw_revoke -> %word {% notReservedKw('revoke')  %}
+kw_privileges -> %word {% notReservedKw('privileges')  %}
+kw_usage -> %word {% notReservedKw('usage')  %}
+kw_execute -> %word {% notReservedKw('execute')  %}
+kw_connect -> %word {% notReservedKw('connect')  %}
 kw_serializable -> %word {% notReservedKw('serializable')  %}
 kw_rollback -> %word {% notReservedKw('rollback')  %}
 kw_insert -> %word {% notReservedKw('insert')  %}

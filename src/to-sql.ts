@@ -1500,6 +1500,27 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
         visitQualifiedName(p.table);
     },
 
+    grant: g => {
+        ret.push('GRANT ', g.privileges === 'all' ? 'ALL' : g.privileges.map(x => x.toUpperCase()).join(', '), ' ON ');
+        list(g.on.names, n => visitQualifiedName(n), false);
+        ret.push(' TO ');
+        list(g.to, r => ret.push(name(r)), false);
+        if (g.withGrantOption) {
+            ret.push(' WITH GRANT OPTION');
+        }
+    },
+
+    revoke: g => {
+        ret.push('REVOKE ');
+        if (g.grantOptionFor) {
+            ret.push('GRANT OPTION FOR ');
+        }
+        ret.push(g.privileges === 'all' ? 'ALL' : g.privileges.map(x => x.toUpperCase()).join(', '), ' ON ');
+        list(g.on.names, n => visitQualifiedName(n), false);
+        ret.push(' FROM ');
+        list(g.from, r => ret.push(name(r)), false);
+    },
+
     prepare: s => {
         ret.push('PREPARE ', name(s.name));
         if (s.args?.length) {
