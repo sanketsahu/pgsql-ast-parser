@@ -1502,6 +1502,20 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
         }
     },
 
+    createTrigger: t => {
+        ret.push('CREATE ', t.constraint ? 'CONSTRAINT ' : '', 'TRIGGER ', name(t.name), ' ', t.timing.toUpperCase(), ' ');
+        ret.push(t.events.map(e => e.event.toUpperCase() + (e.columns ? ' OF ' + e.columns.map(name).join(', ') : '')).join(' OR '));
+        ret.push(' ON ');
+        visitQualifiedName(t.table);
+        ret.push(' FOR EACH ', t.forEach.toUpperCase());
+        if (t.when) { ret.push(' WHEN ('); m.expr(t.when); ret.push(')'); }
+        ret.push(' EXECUTE FUNCTION ');
+        visitQualifiedName(t.execute.function);
+        ret.push('(');
+        list(t.execute.arguments, a => m.expr(a), false);
+        ret.push(')');
+    },
+
     dropPolicy: p => {
         ret.push('DROP POLICY ');
         if (p.ifExists) {

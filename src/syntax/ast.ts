@@ -40,6 +40,7 @@ export type Statement = SelectStatement
     | ResetStatement
     | CreatePolicyStatement
     | DropPolicyStatement
+    | CreateTriggerStatement
     | GrantStatement
     | RevokeStatement
     | CreateEnumType
@@ -1107,6 +1108,27 @@ export interface DropPolicyStatement extends PGNode {
     name: Name;
     table: QName;
     ifExists?: boolean;
+}
+
+export interface TriggerEvent {
+    event: 'insert' | 'update' | 'delete' | 'truncate';
+    /** only for UPDATE OF (col, ...) */
+    columns?: Name[];
+}
+
+export interface CreateTriggerStatement extends PGNode {
+    type: 'create trigger';
+    name: Name;
+    constraint?: boolean;
+    timing: 'before' | 'after' | 'instead of';
+    events: TriggerEvent[];
+    table: QName;
+    forEach: 'row' | 'statement';
+    when?: Expr;
+    execute: {
+        function: QName;
+        arguments: Expr[];
+    };
 }
 
 export interface GrantOnTarget extends PGNode {
