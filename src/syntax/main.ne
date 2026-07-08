@@ -68,6 +68,7 @@ statement_noprep
     | create_sequence_statement
     | alter_sequence_statement
     | drop_statement
+    | drop_trigger_statement
     | createtype_statement
     | altertype_statement
     | create_view_statements

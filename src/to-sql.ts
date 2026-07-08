@@ -1525,6 +1525,18 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
         visitQualifiedName(p.table);
     },
 
+    dropTrigger: t => {
+        ret.push('DROP TRIGGER ');
+        if (t.ifExists) {
+            ret.push('IF EXISTS ');
+        }
+        ret.push(name(t.name), ' ON ');
+        visitQualifiedName(t.onTable);
+        if (t.cascade) {
+            ret.push(' ', t.cascade.toUpperCase());
+        }
+    },
+
     grant: g => {
         ret.push('GRANT ', g.privileges === 'all' ? 'ALL' : g.privileges.map(x => x.toUpperCase()).join(', '), ' ON ');
         list(g.on.names, n => visitQualifiedName(n), false);

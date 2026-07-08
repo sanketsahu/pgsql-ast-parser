@@ -18,6 +18,7 @@ export interface IAstPartialMapper {
     alterEnum?(val: a.AlterEnumType): a.Statement | nil
     createCompositeType?(val: a.CreateCompositeType): a.Statement | nil
     drop?: (val: a.DropStatement) => a.Statement | nil
+    dropTrigger?: (val: a.DropTriggerStatement) => a.Statement | nil
     show?: (val: a.ShowStatement) => a.Statement | nil
     createTable?: (val: a.CreateTableStatement) => a.Statement | nil
     truncateTable?: (val: a.TruncateTableStatement) => a.Statement | nil
@@ -291,9 +292,10 @@ export class AstDefaultMapper implements IAstMapper {
             case 'drop index':
             case 'drop sequence':
             case 'drop type':
-            case 'drop trigger':
             case 'drop role':
                 return this.drop(val);
+            case 'drop trigger':
+                return this.dropTrigger(val);
             case 'create enum':
                 return this.createEnum(val);
             case 'alter enum':
@@ -480,6 +482,10 @@ export class AstDefaultMapper implements IAstMapper {
 
 
     drop(val: a.DropStatement): a.Statement | nil {
+        return val;
+    }
+
+    dropTrigger(val: a.DropTriggerStatement): a.Statement | nil {
         return val;
     }
 

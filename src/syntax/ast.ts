@@ -48,6 +48,7 @@ export type Statement = SelectStatement
     | AlterEnumType
     | TruncateTableStatement
     | DropStatement
+    | DropTriggerStatement
     | CommentStatement
     | CreateSchemaStatement
     | WithRecursiveStatement
@@ -227,11 +228,19 @@ export interface TruncateTableStatement extends PGNode {
 }
 
 export interface DropStatement extends PGNode {
-    type: 'drop table' | 'drop sequence' | 'drop index' | 'drop type' | 'drop trigger' | 'drop role';
+    type: 'drop table' | 'drop sequence' | 'drop index' | 'drop type' | 'drop role';
     names: QName[];
     ifExists?: boolean;
     cascade?: 'cascade' | 'restrict';
     concurrently?: boolean;
+}
+
+export interface DropTriggerStatement extends PGNode {
+    type: 'drop trigger';
+    name: Name;
+    onTable: QName;
+    ifExists?: boolean;
+    cascade?: 'cascade' | 'restrict';
 }
 
 export interface NodeLocation {
