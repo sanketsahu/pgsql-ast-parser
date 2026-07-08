@@ -1442,6 +1442,24 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
         ret.push('SHOW ', name(s.variable));
     },
 
+    createRole: r => {
+        ret.push('CREATE ROLE ', name(r.name));
+        const o = r.options;
+        if (o.superuser !== undefined) ret.push(o.superuser ? ' SUPERUSER' : ' NOSUPERUSER');
+        if (o.login !== undefined) ret.push(o.login ? ' LOGIN' : ' NOLOGIN');
+        if (o.bypassRls !== undefined) ret.push(o.bypassRls ? ' BYPASSRLS' : ' NOBYPASSRLS');
+    },
+
+    setRole: r => {
+        ret.push('SET ');
+        if (r.scope) ret.push(r.scope.toUpperCase(), ' ');
+        ret.push('ROLE ', r.role ? name(r.role) : 'NONE');
+    },
+
+    reset: r => {
+        ret.push('RESET ', r.identifier === 'all' ? 'ALL' : name(r.identifier));
+    },
+
     prepare: s => {
         ret.push('PREPARE ', name(s.name));
         if (s.args?.length) {

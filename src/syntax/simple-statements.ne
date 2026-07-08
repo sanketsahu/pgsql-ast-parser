@@ -12,6 +12,8 @@ simplestatements_all
     | simplestatements_release
     | simplestatements_tablespace
     | simplestatements_set
+    | simplestatements_set_role
+    | simplestatements_reset
     | simplestatements_show
     | simplestatements_begin
 
@@ -87,6 +89,24 @@ simplestatements_set_val_raw
 
 
 simplestatements_show -> kw_show ident {% x => track(x, { type: 'show', variable: asName(x[1]) }) %}
+
+# https://www.postgresql.org/docs/current/sql-set-role.html
+# unquoted "none" resets to the session role; anything else is a role name
+simplestatements_set_role -> kw_set (kw_session | kw_local):? kw_role ident {% x => {
+    const r = asName(x[3]);
+    return track(x, {
+        type: 'set role',
+        scope: unwrap(x[1])?.toLowerCase(),
+        ...(r.name.toLowerCase() === 'none' ? {} : { role: r }),
+    });
+} %}
+
+# https://www.postgresql.org/docs/current/sql-reset.html
+simplestatements_reset -> kw_reset (%kw_all {% () => 'all' %} | ident) {% x => track(x, {
+    type: 'reset',
+    identifier: unwrap(x[1]) === 'all' ? 'all' : asName(unwrap(x[1])),
+}) %}
+
 
 
 # https://www.postgresql.org/docs/current/sql-createschema.html

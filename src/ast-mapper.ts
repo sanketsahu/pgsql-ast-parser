@@ -84,6 +84,9 @@ export interface IAstPartialMapper {
     constraint?: (constraint: a.ColumnConstraint) => a.ColumnConstraint | nil
     valueKeyword?(val: a.ExprValueKeyword): a.Expr | nil
     tablespace?(val: a.TablespaceStatement): a.Statement | nil
+    createRole?(val: a.CreateRoleStatement): a.Statement | nil
+    setRole?(val: a.SetRoleStatement): a.Statement | nil
+    reset?(val: a.ResetStatement): a.Statement | nil
     setGlobal?(val: a.SetGlobalStatement): a.Statement | nil
     setTimezone?(val: a.SetTimezone): a.Statement | nil
     setNames?(val: a.SetNames): a.Statement | nil
@@ -256,6 +259,12 @@ export class AstDefaultMapper implements IAstMapper {
                 return this.setTimezone(val);
             case 'set names':
                 return this.setNames(val);
+            case 'create role':
+                return this.createRole(val);
+            case 'set role':
+                return this.setRole(val);
+            case 'reset':
+                return this.reset(val);
             case 'create sequence':
                 return this.createSequence(val);
             case 'alter sequence':
@@ -267,6 +276,7 @@ export class AstDefaultMapper implements IAstMapper {
             case 'drop sequence':
             case 'drop type':
             case 'drop trigger':
+            case 'drop role':
                 return this.drop(val);
             case 'create enum':
                 return this.createEnum(val);
@@ -398,6 +408,18 @@ export class AstDefaultMapper implements IAstMapper {
     }
 
     show(val: a.ShowStatement): a.Statement | nil {
+        return val;
+    }
+
+    createRole(val: a.CreateRoleStatement): a.Statement | nil {
+        return val;
+    }
+
+    setRole(val: a.SetRoleStatement): a.Statement | nil {
+        return val;
+    }
+
+    reset(val: a.ResetStatement): a.Statement | nil {
         return val;
     }
 

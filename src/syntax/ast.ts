@@ -35,6 +35,9 @@ export type Statement = SelectStatement
     | SetGlobalStatement
     | SetTimezone
     | SetNames
+    | CreateRoleStatement
+    | SetRoleStatement
+    | ResetStatement
     | CreateEnumType
     | CreateCompositeType
     | AlterEnumType
@@ -219,7 +222,7 @@ export interface TruncateTableStatement extends PGNode {
 }
 
 export interface DropStatement extends PGNode {
-    type: 'drop table' | 'drop sequence' | 'drop index' | 'drop type' | 'drop trigger';
+    type: 'drop table' | 'drop sequence' | 'drop index' | 'drop type' | 'drop trigger' | 'drop role';
     names: QName[];
     ifExists?: boolean;
     cascade?: 'cascade' | 'restrict';
@@ -1042,6 +1045,31 @@ export interface SetGlobalStatement extends PGNode {
     variable: Name;
     scope?: string;
     set: SetGlobalValue;
+}
+
+export interface RoleOptions {
+    superuser?: boolean;
+    login?: boolean;
+    bypassRls?: boolean;
+}
+
+export interface CreateRoleStatement extends PGNode {
+    type: 'create role';
+    name: Name;
+    options: RoleOptions;
+}
+
+export interface SetRoleStatement extends PGNode {
+    type: 'set role';
+    scope?: string;
+    /** absent means "NONE" (reset to the session role) */
+    role?: Name | nil;
+}
+
+export interface ResetStatement extends PGNode {
+    type: 'reset';
+    /** 'all', or the config parameter / 'role' being reset */
+    identifier: 'all' | Name;
 }
 export interface SetTimezone extends PGNode {
     type: 'set timezone',
