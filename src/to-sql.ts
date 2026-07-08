@@ -1,7 +1,7 @@
 import { IAstPartialMapper, AstDefaultMapper } from './ast-mapper';
 import { astVisitor, IAstVisitor, IAstFullVisitor } from './ast-visitor';
 import { NotSupported, nil, ReplaceReturnType, NoExtraProperties } from './utils';
-import { TableConstraint, JoinClause, ColumnConstraint, AlterSequenceStatement, CreateSequenceStatement, AlterSequenceSetOptions, CreateSequenceOptions, QName, SetGlobalValue, AlterColumnAddGenerated, QColumn, Name, OrderByStatement, QNameAliased } from './syntax/ast';
+import { TableConstraint, JoinClause, ColumnConstraint, AlterSequenceStatement, CreateSequenceStatement, AlterSequenceSetOptions, CreateSequenceOptions, QName, SetGlobalValue, AlterColumnAddGenerated, QColumn, Name, OrderByStatement, QNameAliased, FrameBound } from './syntax/ast';
 import { literal } from './pg-escape';
 import { sqlKeywords } from './keywords';
 
@@ -526,6 +526,26 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
             if (v.over.orderBy) {
                 visitOrderBy(m, v.over.orderBy);
                 ret.push(' ');
+            }
+            if (v.over.frame) {
+                const { unit, start, end } = v.over.frame;
+                ret.push(unit.toUpperCase(), ' ');
+                const bound = (b: FrameBound) => {
+                    if (b.value) {
+                        m.expr(b.value);
+                        ret.push(' ', b.type.toUpperCase(), ' ');
+                    } else {
+                        ret.push(b.type.toUpperCase(), ' ');
+                    }
+                };
+                if (end) {
+                    ret.push('BETWEEN ');
+                    bound(start);
+                    ret.push('AND ');
+                    bound(end);
+                } else {
+                    bound(start);
+                }
             }
             ret.push(') ');
         }

@@ -203,6 +203,12 @@ kw_increment -> %word {% notReservedKw('increment')  %}
 kw_by -> %word {% notReservedKw('by')  %}
 kw_row -> %word {% notReservedKw('row')  %}
 kw_rows -> %word {% notReservedKw('rows')  %}
+kw_range -> %word {% notReservedKw('range')  %}
+kw_groups -> %word {% notReservedKw('groups')  %}
+kw_unbounded -> %word {% notReservedKw('unbounded')  %}
+kw_preceding -> %word {% notReservedKw('preceding')  %}
+kw_following -> %word {% notReservedKw('following')  %}
+kw_current -> %word {% notReservedKw('current')  %}
 kw_next -> %word {% notReservedKw('next')  %}
 kw_match -> %word {% notReservedKw('match')  %}
 kw_replace -> %word {% notReservedKw('replace')  %}

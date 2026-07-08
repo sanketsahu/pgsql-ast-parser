@@ -936,6 +936,19 @@ export interface ExprCall extends PGNode {
 export interface CallOver extends PGNode {
     orderBy?: OrderByStatement[] | nil;
     partitionBy?: Expr[] | nil;
+    frame?: CallOverFrame | nil;
+}
+
+export interface CallOverFrame extends PGNode {
+    unit: 'rows' | 'range' | 'groups';
+    start: FrameBound;
+    end?: FrameBound | nil;
+}
+
+export interface FrameBound extends PGNode {
+    type: 'unbounded preceding' | 'unbounded following' | 'current row' | 'preceding' | 'following';
+    /** only set for 'preceding' & 'following' bound types */
+    value?: Expr | nil;
 }
 
 

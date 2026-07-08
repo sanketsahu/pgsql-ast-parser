@@ -220,10 +220,37 @@ expr_call_over -> kw_over
             lparen
                 (kw_partition kw_by expr_list_raw {% last %}):?
                 select_order_by:?
+                expr_call_over_frame:?
             rparen {% x => track(x, {
                 ...x[2] && { partitionBy: x[2] },
                 ...x[3] && { orderBy: x[3] },
+                ...x[4] && { frame: unwrap(x[4]) },
             }) %}
+
+# frame clause: https://www.postgresql.org/docs/current/sql-expressions.html#SYNTAX-WINDOW-FUNCTIONS
+expr_call_over_frame -> (kw_rows | kw_range | kw_groups)
+            expr_call_over_frame_bounds
+            {% x => track(x, {
+                unit: toStr(x[0]),
+                ...x[1],
+            }) %}
+
+expr_call_over_frame_bounds
+    -> kw_between expr_call_over_frame_bound %kw_and expr_call_over_frame_bound {% x => ({ start: unwrap(x[1]), end: unwrap(x[3]) }) %}
+    | expr_call_over_frame_bound {% x => ({ start: unwrap(x[0]) }) %}
+
+expr_call_over_frame_bound
+    -> kw_unbounded kw_preceding {% x => track(x, { type: 'unbounded preceding' }) %}
+    | kw_unbounded kw_following {% x => track(x, { type: 'unbounded following' }) %}
+    | kw_current kw_row {% x => track(x, { type: 'current row' }) %}
+    | expr_call_over_frame_value kw_preceding {% x => track(x, { type: 'preceding', value: unwrap(x[0]) }) %}
+    | expr_call_over_frame_value kw_following {% x => track(x, { type: 'following', value: unwrap(x[0]) }) %}
+
+# restricted to unambiguous forms (a general expr would clash with keyword bounds)
+expr_call_over_frame_value
+    -> int {% x => track(x, { type: 'integer', value: unbox(x[0]) }) %}
+    | %qparam {% x => track(x, { type: 'parameter', name: toStr(x[0]) }) %}
+    | expr_paren {% unwrap %}
 
 expr_call_within_group -> (kw_within %kw_group)
             lparen

@@ -1558,6 +1558,62 @@ line`,
             }
         })
 
+        checkTreeExpr(`SUM(v) OVER (ORDER BY v ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)`, {
+            type: 'call',
+            args: [ref('v')],
+            function: { name: 'sum' },
+            over: {
+                orderBy: [{ by: ref('v') }],
+                frame: {
+                    unit: 'rows',
+                    start: { type: 'unbounded preceding' },
+                    end: { type: 'current row' },
+                },
+            }
+        })
+
+        checkTreeExpr(`SUM(v) OVER (ORDER BY v ROWS 2 PRECEDING)`, {
+            type: 'call',
+            args: [ref('v')],
+            function: { name: 'sum' },
+            over: {
+                orderBy: [{ by: ref('v') }],
+                frame: {
+                    unit: 'rows',
+                    start: { type: 'preceding', value: { type: 'integer', value: 2 } },
+                },
+            }
+        })
+
+        checkTreeExpr(`SUM(v) OVER (PARTITION BY g RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)`, {
+            type: 'call',
+            args: [ref('v')],
+            function: { name: 'sum' },
+            over: {
+                partitionBy: [ref('g')],
+                frame: {
+                    unit: 'range',
+                    start: { type: 'current row' },
+                    end: { type: 'unbounded following' },
+                },
+            }
+        })
+
+        checkTreeExpr(`SUM(v) OVER (GROUPS BETWEEN $1 PRECEDING AND 1 FOLLOWING)`, {
+            type: 'call',
+            args: [ref('v')],
+            function: { name: 'sum' },
+            over: {
+                frame: {
+                    unit: 'groups',
+                    start: { type: 'preceding', value: { type: 'parameter', name: '$1' } },
+                    end: { type: 'following', value: { type: 'integer', value: 1 } },
+                },
+            }
+        })
+
+        checkInvalidExpr(`SUM(v) OVER (ROWS BETWEEN UNBOUNDED PRECEDING)`);
+
         checkTreeExpr(`pg_catalog.count(*) filter (where val)`, {
             type: 'call',
             args: [star],
