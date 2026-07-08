@@ -1092,6 +1092,12 @@ line`,
                 type: 'integer', value: 3
             },
         });
+        checkTreeExpr(`position('om' in 'Thomas')`, {
+            type: 'position',
+            substring: { type: 'string', value: 'om' },
+            string: { type: 'string', value: 'Thomas' },
+        });
+
         checkTreeExpr(`substring('val' from 2)`, {
             type: 'substring',
             value: { type: 'string', value: 'val' },

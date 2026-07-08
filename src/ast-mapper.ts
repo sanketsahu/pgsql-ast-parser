@@ -72,6 +72,7 @@ export interface IAstPartialMapper {
     cast?: (val: a.ExprCast) => a.Expr | nil
     call?: (val: a.ExprCall) => a.Expr | nil
     callSubstring?: (val: a.ExprSubstring) => a.Expr | nil
+    callPosition?: (val: a.ExprPosition) => a.Expr | nil
     callOverlay?: (val: a.ExprOverlay) => a.Expr | nil
     array?: (val: a.ExprList) => a.Expr | nil
     constant?: (value: a.ExprLiteral) => a.Expr | nil
@@ -1146,6 +1147,8 @@ export class AstDefaultMapper implements IAstMapper {
                 return this.callOverlay(val);
             case 'substring':
                 return this.callSubstring(val);
+            case 'position':
+                return this.callPosition(val);
             case 'values':
                 return this.values(val);
             case 'default':
@@ -1273,6 +1276,13 @@ export class AstDefaultMapper implements IAstMapper {
             value: this.expr(val.value),
             from: this.expr(val.from),
             for: this.expr(val.for),
+        })
+    }
+
+    callPosition(val: a.ExprPosition): a.Expr | nil {
+        return assignChanged(val, {
+            substring: this.expr(val.substring),
+            string: this.expr(val.string),
         })
     }
     callOverlay(val: a.ExprOverlay): a.Expr | nil {

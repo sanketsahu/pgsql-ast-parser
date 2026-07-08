@@ -205,16 +205,25 @@ expr_call -> expr_fn_name
             (kw_filter lparen %kw_where expr rparen {% get(3) %}):?
             expr_call_within_group:?
             expr_call_over:?
-            {% x => track(x, {
-                type: 'call',
-                function: unwrap(x[0]),
-                ...x[2] && {distinct: toStr(x[2])},
-                args: x[3] || [],
-                ...x[4] && {orderBy: x[4]},
-                ...x[6] && {filter: unwrap(x[6])},
-                ...x[7] && {withinGroup: x[7]},
-                ...x[8] && {over: unwrap(x[8])},
-            }) %}
+            {% (x, _loc, reject) => {
+                const fn = unwrap(x[0]);
+                // "position" has no generic call form in postgres - only the special
+                // "position(x in y)" syntax (spe_position). Reject the generic parse to
+                // avoid an ambiguity, since "x in y" is also a valid boolean argument.
+                if (fn && !fn.schema && typeof fn.name === 'string' && fn.name.toLowerCase() === 'position') {
+                    return reject;
+                }
+                return track(x, {
+                    type: 'call',
+                    function: fn,
+                    ...x[2] && {distinct: toStr(x[2])},
+                    args: x[3] || [],
+                    ...x[4] && {orderBy: x[4]},
+                    ...x[6] && {filter: unwrap(x[6])},
+                    ...x[7] && {withinGroup: x[7]},
+                    ...x[8] && {over: unwrap(x[8])},
+                });
+            } %}
 
 expr_call_over -> kw_over
             lparen
@@ -347,6 +356,7 @@ value_keyword
 
 expr_special_calls -> spe_overlay
                     | spe_substring
+                    | spe_position
 
 spe_overlay -> (word {% kw('overlay') %})
             (%lparen expr_nostar)
@@ -370,6 +380,16 @@ spe_substring -> (word {% kw('substring') %})
                 value: x[1][1],
                 ...x[2] && {from: x[2][1]},
                 ...x[3] && {for: x[3][1]},
+            }) %}
+
+# https://www.postgresql.org/docs/current/functions-string.html  position(substring in string)
+spe_position -> (word {% kw('position') %})
+            (%lparen expr_nostar)
+            (%kw_in expr_nostar)
+            %rparen {% x => track(x, {
+                type: 'position',
+                substring: x[1][1],
+                string: x[2][1],
             }) %}
 
 

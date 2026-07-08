@@ -807,7 +807,8 @@ export type Expr = ExprRef
     | ExprConstant
     | ExprTernary
     | ExprOverlay
-    | ExprSubstring;
+    | ExprSubstring
+    | ExprPosition;
 
 
 /**
@@ -828,6 +829,13 @@ export interface ExprSubstring extends PGNode {
     value: Expr;
     from?: Expr | nil;
     for?: Expr | nil;
+}
+
+/** Handle special syntax: position('om' in 'Thomas') */
+export interface ExprPosition extends PGNode {
+    type: 'position';
+    substring: Expr;
+    string: Expr;
 }
 
 // === https://www.postgresql.org/docs/12/functions.html

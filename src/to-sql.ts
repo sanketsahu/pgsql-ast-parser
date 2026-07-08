@@ -489,6 +489,14 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
         ret.push(')');
     },
 
+    callPosition: p => {
+        ret.push('POSITION(');
+        m.expr(p.substring);
+        ret.push(' IN ');
+        m.expr(p.string);
+        ret.push(')');
+    },
+
     binary: v => {
         m.expr(v.left);
         visitOp(v);
