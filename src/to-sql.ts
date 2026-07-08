@@ -356,6 +356,10 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
         ret.push(' OWNER TO ', name(o.to));
     },
 
+    setRowLevelSecurity: c => {
+        ret.push(' ', c.action.toUpperCase(), ' ROW LEVEL SECURITY');
+    },
+
     alterColumnSimple: c => ret.push(c.type),
 
 
@@ -425,6 +429,8 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
                 return m.dropConstraint(change, table);
             case 'owner':
                 return m.setTableOwner(change, table);
+            case 'row level security':
+                return m.setRowLevelSecurity(change, table);
             default:
                 throw NotSupported.never(change);
         }
@@ -1458,6 +1464,40 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
 
     reset: r => {
         ret.push('RESET ', r.identifier === 'all' ? 'ALL' : name(r.identifier));
+    },
+
+    createPolicy: p => {
+        ret.push('CREATE POLICY ', name(p.name), ' ON ');
+        visitQualifiedName(p.table);
+        if (p.permissive !== undefined) {
+            ret.push(' AS ', p.permissive ? 'PERMISSIVE' : 'RESTRICTIVE');
+        }
+        if (p.for) {
+            ret.push(' FOR ', p.for.toUpperCase());
+        }
+        if (p.roles?.length) {
+            ret.push(' TO ');
+            list(p.roles, r => ret.push(name(r)), false);
+        }
+        if (p.using) {
+            ret.push(' USING (');
+            m.expr(p.using);
+            ret.push(')');
+        }
+        if (p.withCheck) {
+            ret.push(' WITH CHECK (');
+            m.expr(p.withCheck);
+            ret.push(')');
+        }
+    },
+
+    dropPolicy: p => {
+        ret.push('DROP POLICY ');
+        if (p.ifExists) {
+            ret.push('IF EXISTS ');
+        }
+        ret.push(name(p.name), ' ON ');
+        visitQualifiedName(p.table);
     },
 
     prepare: s => {

@@ -28,11 +28,18 @@ altertable_action
     | altertable_add_constraint
     | altertable_drop_constraint
     | altertable_owner
+    | altertable_row_security
 
 
 altertable_rename_table -> kw_rename %kw_to word {% x => track(x, {
     type: 'rename',
     to: asName(last(x)),
+}) %}
+
+altertable_row_security -> (kw_enable | kw_disable | kw_force | kw_no kw_force {% () => 'no force' %})
+            kw_row kw_level kw_security {% x => track(x, {
+    type: 'row level security',
+    action: (() => { const v = unwrap(x[0]); return typeof v === 'string' ? v : toStr(v); })(),
 }) %}
 
 altertable_rename_column -> kw_rename kw_column:? ident %kw_to ident {% x => track(x, {

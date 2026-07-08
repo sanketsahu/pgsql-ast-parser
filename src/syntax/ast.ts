@@ -38,6 +38,8 @@ export type Statement = SelectStatement
     | CreateRoleStatement
     | SetRoleStatement
     | ResetStatement
+    | CreatePolicyStatement
+    | DropPolicyStatement
     | CreateEnumType
     | CreateCompositeType
     | AlterEnumType
@@ -383,11 +385,17 @@ export type TableAlteration = TableAlterationRename
     | TableAlterationAddConstraint
     | TableAlterationOwner
     | TableAlterationDropConstraint
+    | TableAlterationRowLevelSecurity
 
 
 export interface TableAlterationOwner extends PGNode {
     type: 'owner';
     to: Name;
+}
+
+export interface TableAlterationRowLevelSecurity extends PGNode {
+    type: 'row level security';
+    action: 'enable' | 'disable' | 'force' | 'no force';
 }
 
 export interface AlterColumnSetType extends PGNode {
@@ -1070,6 +1078,27 @@ export interface ResetStatement extends PGNode {
     type: 'reset';
     /** 'all', or the config parameter / 'role' being reset */
     identifier: 'all' | Name;
+}
+
+export type PolicyCommand = 'all' | 'select' | 'insert' | 'update' | 'delete';
+
+export interface CreatePolicyStatement extends PGNode {
+    type: 'create policy';
+    name: Name;
+    table: QName;
+    /** true = PERMISSIVE (default), false = RESTRICTIVE */
+    permissive?: boolean;
+    for?: PolicyCommand;
+    roles?: Name[];
+    using?: Expr;
+    withCheck?: Expr;
+}
+
+export interface DropPolicyStatement extends PGNode {
+    type: 'drop policy';
+    name: Name;
+    table: QName;
+    ifExists?: boolean;
 }
 export interface SetTimezone extends PGNode {
     type: 'set timezone',

@@ -37,6 +37,7 @@ export interface IAstPartialMapper {
     dropConstraint?: (change: a.TableAlterationDropConstraint, table: a.QNameAliased) => a.TableAlteration | nil
     renameConstraint?: (change: a.TableAlterationRenameConstraint, table: a.QNameAliased) => a.TableAlteration | nil
     setTableOwner?: (change: a.TableAlterationOwner, table: a.QNameAliased) => a.TableAlteration | nil
+    setRowLevelSecurity?: (change: a.TableAlterationRowLevelSecurity, table: a.QNameAliased) => a.TableAlteration | nil
     renameColumn?: (change: a.TableAlterationRenameColumn, table: a.QNameAliased) => a.TableAlteration | nil
     renameTable?: (change: a.TableAlterationRename, table: a.QNameAliased) => a.TableAlteration | nil
     alterColumn?: (change: a.TableAlterationAlterColumn, inTable: a.QNameAliased) => a.TableAlteration | nil
@@ -87,6 +88,8 @@ export interface IAstPartialMapper {
     createRole?(val: a.CreateRoleStatement): a.Statement | nil
     setRole?(val: a.SetRoleStatement): a.Statement | nil
     reset?(val: a.ResetStatement): a.Statement | nil
+    createPolicy?(val: a.CreatePolicyStatement): a.Statement | nil
+    dropPolicy?(val: a.DropPolicyStatement): a.Statement | nil
     setGlobal?(val: a.SetGlobalStatement): a.Statement | nil
     setTimezone?(val: a.SetTimezone): a.Statement | nil
     setNames?(val: a.SetNames): a.Statement | nil
@@ -265,6 +268,10 @@ export class AstDefaultMapper implements IAstMapper {
                 return this.setRole(val);
             case 'reset':
                 return this.reset(val);
+            case 'create policy':
+                return this.createPolicy(val);
+            case 'drop policy':
+                return this.dropPolicy(val);
             case 'create sequence':
                 return this.createSequence(val);
             case 'alter sequence':
@@ -420,6 +427,16 @@ export class AstDefaultMapper implements IAstMapper {
     }
 
     reset(val: a.ResetStatement): a.Statement | nil {
+        return val;
+    }
+
+    createPolicy(val: a.CreatePolicyStatement): a.Statement | nil {
+        const using = this.expr(val.using);
+        const withCheck = this.expr(val.withCheck);
+        return assignChanged(val, { using, withCheck });
+    }
+
+    dropPolicy(val: a.DropPolicyStatement): a.Statement | nil {
         return val;
     }
 
@@ -809,6 +826,8 @@ export class AstDefaultMapper implements IAstMapper {
                 return this.dropConstraint(change, table);
             case 'owner':
                 return this.setTableOwner(change, table);
+            case 'row level security':
+                return this.setRowLevelSecurity(change, table);
             default:
                 throw NotSupported.never(change);
         }
@@ -823,6 +842,10 @@ export class AstDefaultMapper implements IAstMapper {
     }
 
     setTableOwner(change: a.TableAlterationOwner, table: a.QNameAliased): a.TableAlteration | nil {
+        return change;
+    }
+
+    setRowLevelSecurity(change: a.TableAlterationRowLevelSecurity, table: a.QNameAliased): a.TableAlteration | nil {
         return change;
     }
 
