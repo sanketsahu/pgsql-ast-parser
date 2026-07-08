@@ -8,6 +8,8 @@ simplestatements_all
     -> simplestatements_start_transaction
     | simplestatements_commit
     | simplestatements_rollback
+    | simplestatements_savepoint
+    | simplestatements_release
     | simplestatements_tablespace
     | simplestatements_set
     | simplestatements_show
@@ -26,7 +28,21 @@ simplestatements_start_transaction -> (kw_start kw_transaction) {% x => track(x,
 simplestatements_commit -> kw_commit {% x => track(x, { type: 'commit' }) %}
 
 # https://www.postgresql.org/docs/12/sql-rollback.html
-simplestatements_rollback -> kw_rollback {% x => track(x, { type: 'rollback' }) %}
+simplestatements_rollback -> kw_rollback (%kw_to kw_savepoint:? ident {% last %}):? {% x => track(x, {
+    type: 'rollback',
+    ...x[1] && { to: asName(unwrap(x[1])) },
+}) %}
+
+# https://www.postgresql.org/docs/current/sql-savepoint.html
+simplestatements_savepoint -> kw_savepoint ident {% x => track(x, {
+    type: 'savepoint',
+    name: asName(x[1]),
+}) %}
+
+simplestatements_release -> kw_release kw_savepoint:? ident {% x => track(x, {
+    type: 'release savepoint',
+    name: asName(x[2]),
+}) %}
 
 simplestatements_tablespace -> kw_tablespace word {% x => track(x, {
     type: 'tablespace',

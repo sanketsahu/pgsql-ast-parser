@@ -203,6 +203,8 @@ kw_increment -> %word {% notReservedKw('increment')  %}
 kw_by -> %word {% notReservedKw('by')  %}
 kw_row -> %word {% notReservedKw('row')  %}
 kw_rows -> %word {% notReservedKw('rows')  %}
+kw_savepoint -> %word {% notReservedKw('savepoint')  %}
+kw_release -> %word {% notReservedKw('release')  %}
 kw_range -> %word {% notReservedKw('range')  %}
 kw_groups -> %word {% notReservedKw('groups')  %}
 kw_unbounded -> %word {% notReservedKw('unbounded')  %}

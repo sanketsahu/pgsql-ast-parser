@@ -28,7 +28,7 @@ export interface IAstPartialMapper {
     deallocate?: (st: a.DeallocateStatement) => a.Statement | nil
     parameter?: (st: a.ExprParameter) => a.Expr | nil
     tableRef?: (st: a.QNameAliased) => a.QNameAliased | nil
-    transaction?: (val: a.CommitStatement | a.RollbackStatement | a.StartTransactionStatement) => a.Statement | nil
+    transaction?: (val: a.CommitStatement | a.RollbackStatement | a.StartTransactionStatement | a.SavepointStatement | a.ReleaseSavepointStatement) => a.Statement | nil
     createIndex?: (val: a.CreateIndexStatement) => a.Statement | nil
     alterTable?: (st: a.AlterTableStatement) => a.Statement | nil
     alterIndex?: (st: a.AlterIndexStatement) => a.Statement | nil
@@ -224,6 +224,8 @@ export class AstDefaultMapper implements IAstMapper {
             case 'commit':
             case 'start transaction':
             case 'rollback':
+            case 'savepoint':
+            case 'release savepoint':
                 return this.transaction(val);
             case 'create index':
                 return this.createIndex(val);
@@ -673,7 +675,7 @@ export class AstDefaultMapper implements IAstMapper {
         return st;
     }
 
-    transaction(val: a.CommitStatement | a.RollbackStatement | a.StartTransactionStatement): a.Statement | nil {
+    transaction(val: a.CommitStatement | a.RollbackStatement | a.StartTransactionStatement | a.SavepointStatement | a.ReleaseSavepointStatement): a.Statement | nil {
         return val;
     }
 

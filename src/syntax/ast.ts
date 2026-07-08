@@ -23,6 +23,8 @@ export type Statement = SelectStatement
     | DeleteStatement
     | WithStatement
     | RollbackStatement
+    | SavepointStatement
+    | ReleaseSavepointStatement
     | TablespaceStatement
     | CreateViewStatement
     | CreateMaterializedViewStatement
@@ -239,6 +241,18 @@ export interface CommitStatement extends PGNode {
 }
 export interface RollbackStatement extends PGNode {
     type: 'rollback';
+    /** rollback to a savepoint */
+    to?: Name | nil;
+}
+
+export interface SavepointStatement extends PGNode {
+    type: 'savepoint';
+    name: Name;
+}
+
+export interface ReleaseSavepointStatement extends PGNode {
+    type: 'release savepoint';
+    name: Name;
 }
 
 export interface TablespaceStatement extends PGNode {
@@ -640,7 +654,8 @@ export interface WithStatement extends PGNode {
 export interface WithRecursiveStatement extends PGNode {
     type: 'with recursive';
     alias: Name;
-    columnNames: Name[];
+    /** column names are optional (inferred from the seed query when absent) */
+    columnNames?: Name[] | nil;
     bind: SelectFromUnion;
     in: WithStatementBinding;
 }
@@ -820,7 +835,7 @@ export type LogicOperator = 'OR' | 'AND';
 export type EqualityOperator = 'IN' | 'NOT IN' | 'LIKE' | 'NOT LIKE' | 'ILIKE' | 'NOT ILIKE' | '=' | '!=';
 // see https://www.postgresql.org/docs/12/functions-math.html
 export type MathOpsBinary = '|' | '&' | '>>' | '^' | '#' | '<<' | '>>';
-export type ComparisonOperator = '>' | '>=' | '<' | '<=' | '@>' | '<@' | '?' | '?|' | '?&' | '#>>' | '~' | '~*' | '!~' | '!~*' | '@@';
+export type ComparisonOperator = '>' | '>=' | '<' | '<=' | '@>' | '<@' | '?' | '?|' | '?&' | '#>' | '#>>' | '~' | '~*' | '!~' | '!~*' | '@@';
 export type AdditiveOperator = '||' | '-' | '#-' | '&&' | '+';
 export type MultiplicativeOperator = '*' | '%' | '/';
 export type ConstructOperator = 'AT TIME ZONE';

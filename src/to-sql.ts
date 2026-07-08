@@ -827,11 +827,11 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
     },
 
     withRecursive: val => {
-        ret.push('WITH RECURSIVE '
-            , name(val.alias)
-            , '('
-            , ...val.columnNames.map(name).join(', ')
-            , ') AS (');
+        ret.push('WITH RECURSIVE ', name(val.alias));
+        if (val.columnNames) {
+            ret.push('(', ...val.columnNames.map(name).join(', '), ')');
+        }
+        ret.push(' AS (');
         m.union(val.bind);
         ret.push(') ');
         m.statement(val.in);
@@ -1507,7 +1507,14 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
     },
 
     transaction: t => {
-        ret.push(t.type);
+        ret.push(t.type.toUpperCase());
+        if (t.type === 'rollback' && t.to) {
+            ret.push(' TO ', name(t.to));
+        }
+        if (t.type === 'savepoint' || t.type === 'release savepoint') {
+            ret.push(' ', name(t.name));
+        }
+        ret.push(' ');
     },
 
     unary: t => {
