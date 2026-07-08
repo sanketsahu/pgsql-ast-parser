@@ -603,9 +603,14 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
                 ret.push(c.value ? 'true' : 'false');
                 break;
             case 'integer':
-                ret.push(c.value.toString(10));
+                // prefer the exact source digits when the JS number would lose precision
+                ret.push(c.valueText ?? c.value.toString(10));
                 break;
             case 'numeric':
+                if (c.valueText) {
+                    ret.push(c.valueText);
+                    break;
+                }
                 ret.push(c.value.toString());
                 if (Number.isInteger(c.value)) {
                     ret.push('.');

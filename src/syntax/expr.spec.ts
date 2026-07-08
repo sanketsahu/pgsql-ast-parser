@@ -43,16 +43,19 @@ describe('Expressions', () => {
         checkTreeExpr(['0.5', '.5'], {
             type: 'numeric',
             value: 0.5,
+            valueText: '0.5',
         });
 
         checkTreeExpr(['-0.5', '-.5'], {
             type: 'numeric',
             value: -0.5,
+            valueText: '-0.5',
         });
 
         checkTreeExpr(['-42.', '-42.0'], {
             type: 'numeric',
             value: -42,
+            valueText: '-42.',
         });
 
         checkInvalidExpr('42. 51');
@@ -393,11 +396,13 @@ line`,
         checkTreeExpr(['42.', '42.0'], {
             type: 'numeric',
             value: 42,
+            valueText: '42.',
         });
 
         checkTreeExpr(['.42', '0.42'], {
             type: 'numeric',
             value: .42,
+            valueText: '0.42',
         });
 
         checkTreeExpr(['42+51', '42 + 51'], {
@@ -502,15 +507,18 @@ line`,
                 left: {
                     type: 'numeric',
                     value: 2,
+                    valueText: '2.',
                 },
                 right: {
                     type: 'numeric',
                     value: 0.3,
+                    valueText: '0.3',
                 }
             },
             right: {
                 type: 'numeric',
                 value: 4.5,
+                valueText: '4.5',
             },
         });
 

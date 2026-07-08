@@ -1019,6 +1019,8 @@ export interface ExprNull extends PGNode {
 export interface ExprInteger extends PGNode {
     type: 'integer';
     value: number;
+    /** exact source digits, present only when `value` (a JS number) loses precision */
+    valueText?: string;
 }
 
 export interface ExprDefault extends PGNode {
@@ -1028,6 +1030,8 @@ export interface ExprDefault extends PGNode {
 export interface ExprNumeric extends PGNode {
     type: 'numeric';
     value: number;
+    /** exact source text, present for fractional/exponent literals */
+    valueText?: string;
 }
 
 export interface ExprString extends PGNode {

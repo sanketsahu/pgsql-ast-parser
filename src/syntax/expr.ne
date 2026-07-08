@@ -276,8 +276,8 @@ expr_extract -> (word {% kw('extract') %}) lparen word %kw_from expr rparen {% x
 }) %}
 
 expr_primary
-    -> float {% x => track(x, { type: 'numeric', value: unbox(x[0]) }) %}
-    | int {% x => track(x, { type: 'integer', value: unbox(x[0]) }) %}
+    -> %float {% x => track(x, mkNumeric(x[0])) %}
+    | %int {% x => track(x, mkInteger(x[0])) %}
     | string {% x => track(x, { type: 'string', value: unbox(x[0]) }) %}
     | %kw_true {% x => track(x, { type: 'boolean', value: true }) %}
     | %kw_false {% x => track(x, { type: 'boolean', value: false }) %}

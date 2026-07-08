@@ -73,6 +73,39 @@
         return flattenStr(e).join(join || '');
     }
 
+    function mkInteger(tok: any) {
+        const text = String(tok?.value ?? tok);
+        const n = parseInt(text, 10);
+        // preserve exact digits when the value can't be represented as a safe JS integer
+        return Number.isSafeInteger(n)
+            ? { type: 'integer', value: n }
+            : { type: 'integer', value: n, valueText: text };
+    }
+    function canonNumeric(text: string): string {
+        // canonical decimal form (equivalent literals -> same text), precision preserved
+        let t = text.trim();
+        if (/[eE]/.test(t)) {
+            return t; // leave exponent forms as-is
+        }
+        let sign = '';
+        if (t[0] === '+' || t[0] === '-') { sign = t[0] === '-' ? '-' : ''; t = t.slice(1); }
+        if (t.startsWith('.')) { t = '0' + t; }        // .5 -> 0.5
+        if (t.includes('.')) {
+            t = t.replace(/0+$/, '');                   // 1.50 -> 1.5, 42.0 -> 42.
+            // keep the trailing '.' so it re-parses as numeric (not integer)
+        }
+        return (sign && parseFloat(t) !== 0 ? sign : '') + t;
+    }
+    function mkNumeric(tok: any) {
+        const text = String(tok?.value ?? tok);
+        const n = parseFloat(text);
+        // a fractional/exponent literal may not round-trip through a JS double, so keep
+        // the exact (canonical) source text for arbitrary-precision numeric consumers
+        return /[.eE]/.test(text)
+            ? { type: 'numeric', value: n, valueText: canonNumeric(text) }
+            : { type: 'numeric', value: n };
+    }
+
     function fromEntries(vals: [string, any][]): any {
         const ret = {} as any;
         for (const [k, v] of vals) {
