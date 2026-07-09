@@ -248,6 +248,7 @@ kw_timestamp -> %word {% notReservedKw('timestamp')  %}
 kw_cycle -> %word {% notReservedKw('cycle')  %}
 kw_function -> %word {% notReservedKw('function')  %}
 kw_returns -> %word {% notReservedKw('returns')  %}
+kw_setof -> %word {% notReservedKw('setof')  %}
 kw_language -> %word {% notReservedKw('language')  %}
 kw_out -> %word {% notReservedKw('out')  %}
 kw_inout -> %word {% notReservedKw('inout')  %}

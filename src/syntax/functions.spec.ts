@@ -26,6 +26,16 @@ describe('Create function', () => {
         returns: integer,
     });
 
+    checkStatement(`CREATE FUNCTION gen() RETURNS SETOF integer AS 'x' LANGUAGE plpgsql`, {
+        type: 'create function',
+        name: { name: 'gen' },
+        arguments: [],
+        code: 'x',
+        language: { name: 'plpgsql' },
+        returns: integer,
+        setof: true,
+    });
+
     // modifiers BEFORE code block
     checkStatement(`CREATE FUNCTION add(integer, integer) RETURNS integer stable
     LANGUAGE SQL RETURNS NULL ON NULL INPUT

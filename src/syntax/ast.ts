@@ -91,6 +91,8 @@ export interface CreateFunctionStatement extends PGNode {
     language?: Name;
     arguments: FunctionArgument[];
     returns?: DataTypeDef | ReturnsTable;
+    /** RETURNS SETOF <type>: the function returns a set of `returns` */
+    setof?: boolean;
     purity?: 'immutable' | 'stable' | 'volatile';
     leakproof?: boolean;
     onNullInput?: 'call' | 'null' | 'strict';

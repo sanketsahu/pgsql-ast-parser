@@ -814,7 +814,7 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
                 case undefined:
                 case null:
                 case 'array':
-                    ret.push(' RETURNS ');
+                    ret.push(c.setof ? ' RETURNS SETOF ' : ' RETURNS ');
                     m.dataType(c.returns);
                     break;
                 default:
