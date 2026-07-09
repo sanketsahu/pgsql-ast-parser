@@ -166,10 +166,12 @@ declare var op_exp: any;
 declare var lbracket: any;
 declare var rbracket: any;
 declare var op_cast: any;
-declare var kw_cast: any;
 declare var dot: any;
+declare var kw_cast: any;
 declare var kw_array: any;
 declare var qparam: any;
+declare var float: any;
+declare var int: any;
 declare var kw_default: any;
 declare var kw_like: any;
 declare var kw_ilike: any;
@@ -210,6 +212,9 @@ declare var kw_foreign: any;
 declare var kw_references: any;
 declare var kw_on: any;
 declare var kw_full: any;
+declare var kw_not: any;
+declare var kw_deferrable: any;
+declare var kw_initially: any;
 declare var kw_null: any;
 declare var kw_default: any;
 declare var kw_like: any;
@@ -231,14 +236,50 @@ declare var op_eq: any;
 declare var kw_create: any;
 declare var kw_with: any;
 declare var kw_from: any;
-declare var kw_default: any;
+declare var kw_create: any;
+declare var kw_user: any;
+declare var kw_with: any;
+declare var kw_create: any;
+declare var kw_on: any;
+declare var kw_as: any;
+declare var kw_for: any;
 declare var kw_to: any;
+declare var kw_using: any;
+declare var kw_with: any;
+declare var kw_check: any;
+declare var kw_all: any;
+declare var kw_select: any;
+declare var kw_current_user: any;
+declare var kw_current_role: any;
+declare var kw_session_user: any;
+declare var kw_grant: any;
+declare var kw_to: any;
+declare var kw_with: any;
+declare var kw_for: any;
+declare var kw_from: any;
+declare var kw_all: any;
+declare var kw_select: any;
+declare var kw_references: any;
+declare var kw_on: any;
+declare var kw_table: any;
+declare var kw_group: any;
+declare var kw_current_user: any;
+declare var kw_session_user: any;
+declare var kw_create: any;
+declare var kw_constraint: any;
+declare var kw_on: any;
+declare var kw_for: any;
+declare var kw_when: any;
+declare var kw_or: any;
+declare var kw_to: any;
+declare var kw_default: any;
 declare var op_eq: any;
 declare var word: any;
 declare var kw_on: any;
 declare var kw_true: any;
 declare var kw_false: any;
 declare var quoted_word: any;
+declare var kw_all: any;
 declare var kw_create: any;
 declare var kw_using: any;
 declare var comma: any;
@@ -275,13 +316,21 @@ declare var kw_to: any;
 declare var kw_session_user: any;
 declare var kw_current_user: any;
 declare var comma: any;
+declare var kw_on: any;
 declare var kw_table: any;
+declare var kw_user: any;
 declare var kw_concurrently: any;
 declare var kw_with: any;
 declare var kw_as: any;
 declare var kw_create: any;
 declare var kw_as: any;
 declare var comma: any;
+declare var kw_create: any;
+declare var kw_as: any;
+declare var kw_constraint: any;
+declare var kw_null: any;
+declare var kw_check: any;
+declare var kw_default: any;
 declare var kw_to: any;
 declare var kw_union: any;
 declare var kw_all: any;
@@ -384,6 +433,39 @@ import {track, box, unbox, doubleQuoted} from '../lexer.ts';
         return flattenStr(e).join(join || '');
     }
 
+    function mkInteger(tok: any) {
+        const text = String(tok?.value ?? tok);
+        const n = parseInt(text, 10);
+        // preserve exact digits when the value can't be represented as a safe JS integer
+        return Number.isSafeInteger(n)
+            ? { type: 'integer', value: n }
+            : { type: 'integer', value: n, valueText: text };
+    }
+    function canonNumeric(text: string): string {
+        // canonical decimal form (equivalent literals -> same text), precision preserved
+        let t = text.trim();
+        if (/[eE]/.test(t)) {
+            return t; // leave exponent forms as-is
+        }
+        let sign = '';
+        if (t[0] === '+' || t[0] === '-') { sign = t[0] === '-' ? '-' : ''; t = t.slice(1); }
+        if (t.startsWith('.')) { t = '0' + t; }        // .5 -> 0.5
+        if (t.includes('.')) {
+            t = t.replace(/0+$/, '');                   // 1.50 -> 1.5, 42.0 -> 42.
+            // keep the trailing '.' so it re-parses as numeric (not integer)
+        }
+        return (sign && parseFloat(t) !== 0 ? sign : '') + t;
+    }
+    function mkNumeric(tok: any) {
+        const text = String(tok?.value ?? tok);
+        const n = parseFloat(text);
+        // a fractional/exponent literal may not round-trip through a JS double, so keep
+        // the exact (canonical) source text for arbitrary-precision numeric consumers
+        return /[.eE]/.test(text)
+            ? { type: 'numeric', value: n, valueText: canonNumeric(text) }
+            : { type: 'numeric', value: n };
+    }
+
     function fromEntries(vals: [string, any][]): any {
         const ret = {} as any;
         for (const [k, v] of vals) {
@@ -411,6 +493,11 @@ import {track, box, unbox, doubleQuoted} from '../lexer.ts';
         return kwSet.has(val) ? val : rej;
     }
  }
+
+
+function mergeRoleOptions(opts: any[]) {
+    return Object.assign({}, ...opts);
+}
 
 
 function setSeqOpts(ret: any, opts: any) {
@@ -504,6 +591,28 @@ const grammar: Grammar = {
     {"name": "kw_write", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('write')},
     {"name": "kw_isolation", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('isolation')},
     {"name": "kw_level", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('level')},
+    {"name": "kw_policy", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('policy')},
+    {"name": "kw_permissive", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('permissive')},
+    {"name": "kw_restrictive", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('restrictive')},
+    {"name": "kw_force", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('force')},
+    {"name": "kw_security", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('security')},
+    {"name": "kw_enable", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('enable')},
+    {"name": "kw_disable", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('disable')},
+    {"name": "kw_public", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('public')},
+    {"name": "kw_revoke", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('revoke')},
+    {"name": "kw_privileges", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('privileges')},
+    {"name": "kw_usage", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('usage')},
+    {"name": "kw_execute", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('execute')},
+    {"name": "kw_before", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('before')},
+    {"name": "kw_after", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('after')},
+    {"name": "kw_instead", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('instead')},
+    {"name": "kw_of", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('of')},
+    {"name": "kw_each", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('each')},
+    {"name": "kw_statement", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('statement')},
+    {"name": "kw_procedure", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('procedure')},
+    {"name": "kw_connect", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('connect')},
+    {"name": "kw_deferred", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('deferred')},
+    {"name": "kw_immediate", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('immediate')},
     {"name": "kw_serializable", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('serializable')},
     {"name": "kw_rollback", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('rollback')},
     {"name": "kw_insert", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('insert')},
@@ -530,6 +639,7 @@ const grammar: Grammar = {
     {"name": "kw_maxvalue", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('maxvalue')},
     {"name": "kw_data", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('data')},
     {"name": "kw_type", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('type')},
+    {"name": "kw_domain", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('domain')},
     {"name": "kw_trigger", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('trigger')},
     {"name": "kw_delete", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('delete')},
     {"name": "kw_cache", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('cache')},
@@ -539,6 +649,7 @@ const grammar: Grammar = {
     {"name": "kw_cycle", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('cycle')},
     {"name": "kw_function", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('function')},
     {"name": "kw_returns", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('returns')},
+    {"name": "kw_setof", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('setof')},
     {"name": "kw_language", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('language')},
     {"name": "kw_out", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('out')},
     {"name": "kw_inout", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('inout')},
@@ -550,6 +661,29 @@ const grammar: Grammar = {
     {"name": "kw_by", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('by')},
     {"name": "kw_row", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('row')},
     {"name": "kw_rows", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('rows')},
+    {"name": "kw_savepoint", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('savepoint')},
+    {"name": "kw_release", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('release')},
+    {"name": "kw_role", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('role')},
+    {"name": "kw_reset", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('reset')},
+    {"name": "kw_login", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('login')},
+    {"name": "kw_nologin", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('nologin')},
+    {"name": "kw_superuser", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('superuser')},
+    {"name": "kw_nosuperuser", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('nosuperuser')},
+    {"name": "kw_bypassrls", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('bypassrls')},
+    {"name": "kw_nobypassrls", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('nobypassrls')},
+    {"name": "kw_password", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('password')},
+    {"name": "kw_createdb", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('createdb')},
+    {"name": "kw_nocreatedb", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('nocreatedb')},
+    {"name": "kw_createrole", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('createrole')},
+    {"name": "kw_nocreaterole", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('nocreaterole')},
+    {"name": "kw_inherit", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('inherit')},
+    {"name": "kw_noinherit", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('noinherit')},
+    {"name": "kw_range", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('range')},
+    {"name": "kw_groups", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('groups')},
+    {"name": "kw_unbounded", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('unbounded')},
+    {"name": "kw_preceding", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('preceding')},
+    {"name": "kw_following", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('following')},
+    {"name": "kw_current", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('current')},
     {"name": "kw_next", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('next')},
     {"name": "kw_match", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('match')},
     {"name": "kw_replace", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('replace')},
@@ -1435,6 +1569,12 @@ const grammar: Grammar = {
             operand: unwrap(x[0]),
             to: x[2],
         }) },
+    {"name": "expr_member", "symbols": ["expr_paren", (lexerAny.has("dot") ? {type: "dot"} : dot), "word"], "postprocess":  x => track(x, {
+            type: 'member',
+            operand: unwrap(x[0]),
+            op: '.',
+            member: toStr(x[2]),
+        }) },
     {"name": "expr_member", "symbols": [(lexerAny.has("kw_cast") ? {type: "kw_cast"} : kw_cast), "lparen", "expr_nostar", (lexerAny.has("kw_as") ? {type: "kw_as"} : kw_as), "data_type", "rparen"], "postprocess":  x => track(x, {
             type: 'cast',
             operand: unwrap(x[2]),
@@ -1526,25 +1666,54 @@ const grammar: Grammar = {
     {"name": "expr_call$ebnf$5", "symbols": [], "postprocess": () => null},
     {"name": "expr_call$ebnf$6", "symbols": ["expr_call_over"], "postprocess": id},
     {"name": "expr_call$ebnf$6", "symbols": [], "postprocess": () => null},
-    {"name": "expr_call", "symbols": ["expr_fn_name", "lparen", "expr_call$ebnf$1", "expr_call$ebnf$2", "expr_call$ebnf$3", "rparen", "expr_call$ebnf$4", "expr_call$ebnf$5", "expr_call$ebnf$6"], "postprocess":  x => track(x, {
-            type: 'call',
-            function: unwrap(x[0]),
-            ...x[2] && {distinct: toStr(x[2])},
-            args: x[3] || [],
-            ...x[4] && {orderBy: x[4]},
-            ...x[6] && {filter: unwrap(x[6])},
-            ...x[7] && {withinGroup: x[7]},
-            ...x[8] && {over: unwrap(x[8])},
-        }) },
+    {"name": "expr_call", "symbols": ["expr_fn_name", "lparen", "expr_call$ebnf$1", "expr_call$ebnf$2", "expr_call$ebnf$3", "rparen", "expr_call$ebnf$4", "expr_call$ebnf$5", "expr_call$ebnf$6"], "postprocess":  (x, _loc, reject) => {
+            const fn = unwrap(x[0]);
+            // "position" has no generic call form in postgres - only the special
+            // "position(x in y)" syntax (spe_position). Reject the generic parse to
+            // avoid an ambiguity, since "x in y" is also a valid boolean argument.
+            if (fn && !fn.schema && typeof fn.name === 'string' && fn.name.toLowerCase() === 'position') {
+                return reject;
+            }
+            return track(x, {
+                type: 'call',
+                function: fn,
+                ...x[2] && {distinct: toStr(x[2])},
+                args: x[3] || [],
+                ...x[4] && {orderBy: x[4]},
+                ...x[6] && {filter: unwrap(x[6])},
+                ...x[7] && {withinGroup: x[7]},
+                ...x[8] && {over: unwrap(x[8])},
+            });
+        } },
     {"name": "expr_call_over$ebnf$1$subexpression$1", "symbols": ["kw_partition", "kw_by", "expr_list_raw"], "postprocess": last},
     {"name": "expr_call_over$ebnf$1", "symbols": ["expr_call_over$ebnf$1$subexpression$1"], "postprocess": id},
     {"name": "expr_call_over$ebnf$1", "symbols": [], "postprocess": () => null},
     {"name": "expr_call_over$ebnf$2", "symbols": ["select_order_by"], "postprocess": id},
     {"name": "expr_call_over$ebnf$2", "symbols": [], "postprocess": () => null},
-    {"name": "expr_call_over", "symbols": ["kw_over", "lparen", "expr_call_over$ebnf$1", "expr_call_over$ebnf$2", "rparen"], "postprocess":  x => track(x, {
+    {"name": "expr_call_over$ebnf$3", "symbols": ["expr_call_over_frame"], "postprocess": id},
+    {"name": "expr_call_over$ebnf$3", "symbols": [], "postprocess": () => null},
+    {"name": "expr_call_over", "symbols": ["kw_over", "lparen", "expr_call_over$ebnf$1", "expr_call_over$ebnf$2", "expr_call_over$ebnf$3", "rparen"], "postprocess":  x => track(x, {
             ...x[2] && { partitionBy: x[2] },
             ...x[3] && { orderBy: x[3] },
+            ...x[4] && { frame: unwrap(x[4]) },
         }) },
+    {"name": "expr_call_over_frame$subexpression$1", "symbols": ["kw_rows"]},
+    {"name": "expr_call_over_frame$subexpression$1", "symbols": ["kw_range"]},
+    {"name": "expr_call_over_frame$subexpression$1", "symbols": ["kw_groups"]},
+    {"name": "expr_call_over_frame", "symbols": ["expr_call_over_frame$subexpression$1", "expr_call_over_frame_bounds"], "postprocess":  x => track(x, {
+            unit: toStr(x[0]),
+            ...x[1],
+        }) },
+    {"name": "expr_call_over_frame_bounds", "symbols": ["kw_between", "expr_call_over_frame_bound", (lexerAny.has("kw_and") ? {type: "kw_and"} : kw_and), "expr_call_over_frame_bound"], "postprocess": x => ({ start: unwrap(x[1]), end: unwrap(x[3]) })},
+    {"name": "expr_call_over_frame_bounds", "symbols": ["expr_call_over_frame_bound"], "postprocess": x => ({ start: unwrap(x[0]) })},
+    {"name": "expr_call_over_frame_bound", "symbols": ["kw_unbounded", "kw_preceding"], "postprocess": x => track(x, { type: 'unbounded preceding' })},
+    {"name": "expr_call_over_frame_bound", "symbols": ["kw_unbounded", "kw_following"], "postprocess": x => track(x, { type: 'unbounded following' })},
+    {"name": "expr_call_over_frame_bound", "symbols": ["kw_current", "kw_row"], "postprocess": x => track(x, { type: 'current row' })},
+    {"name": "expr_call_over_frame_bound", "symbols": ["expr_call_over_frame_value", "kw_preceding"], "postprocess": x => track(x, { type: 'preceding', value: unwrap(x[0]) })},
+    {"name": "expr_call_over_frame_bound", "symbols": ["expr_call_over_frame_value", "kw_following"], "postprocess": x => track(x, { type: 'following', value: unwrap(x[0]) })},
+    {"name": "expr_call_over_frame_value", "symbols": ["int"], "postprocess": x => track(x, { type: 'integer', value: unbox(x[0]) })},
+    {"name": "expr_call_over_frame_value", "symbols": [(lexerAny.has("qparam") ? {type: "qparam"} : qparam)], "postprocess": x => track(x, { type: 'parameter', name: toStr(x[0]) })},
+    {"name": "expr_call_over_frame_value", "symbols": ["expr_paren"], "postprocess": unwrap},
     {"name": "expr_call_within_group$subexpression$1", "symbols": ["kw_within", (lexerAny.has("kw_group") ? {type: "kw_group"} : kw_group)]},
     {"name": "expr_call_within_group$subexpression$2", "symbols": [(lexerAny.has("kw_order") ? {type: "kw_order"} : kw_order), "kw_by"]},
     {"name": "expr_call_within_group", "symbols": ["expr_call_within_group$subexpression$1", "lparen", "expr_call_within_group$subexpression$2", "select_order_by_expr", "rparen"], "postprocess": x => track(x, x[3])},
@@ -1554,8 +1723,8 @@ const grammar: Grammar = {
             field: asName(x[2]),
             from: x[4],
         }) },
-    {"name": "expr_primary", "symbols": ["float"], "postprocess": x => track(x, { type: 'numeric', value: unbox(x[0]) })},
-    {"name": "expr_primary", "symbols": ["int"], "postprocess": x => track(x, { type: 'integer', value: unbox(x[0]) })},
+    {"name": "expr_primary", "symbols": [(lexerAny.has("float") ? {type: "float"} : float)], "postprocess": x => track(x, mkNumeric(x[0]))},
+    {"name": "expr_primary", "symbols": [(lexerAny.has("int") ? {type: "int"} : int)], "postprocess": x => track(x, mkInteger(x[0]))},
     {"name": "expr_primary", "symbols": ["string"], "postprocess": x => track(x, { type: 'string', value: unbox(x[0]) })},
     {"name": "expr_primary", "symbols": [(lexerAny.has("kw_true") ? {type: "kw_true"} : kw_true)], "postprocess": x => track(x, { type: 'boolean', value: true })},
     {"name": "expr_primary", "symbols": [(lexerAny.has("kw_false") ? {type: "kw_false"} : kw_false)], "postprocess": x => track(x, { type: 'boolean', value: false })},
@@ -1661,6 +1830,7 @@ const grammar: Grammar = {
     {"name": "value_keyword", "symbols": [(lexerAny.has("kw_current_user") ? {type: "kw_current_user"} : kw_current_user)]},
     {"name": "expr_special_calls", "symbols": ["spe_overlay"]},
     {"name": "expr_special_calls", "symbols": ["spe_substring"]},
+    {"name": "expr_special_calls", "symbols": ["spe_position"]},
     {"name": "spe_overlay$subexpression$1", "symbols": ["word"], "postprocess": kw('overlay')},
     {"name": "spe_overlay$subexpression$2", "symbols": [(lexerAny.has("lparen") ? {type: "lparen"} : lparen), "expr_nostar"]},
     {"name": "spe_overlay$subexpression$3", "symbols": [(lexerAny.has("kw_placing") ? {type: "kw_placing"} : kw_placing), "expr_nostar"]},
@@ -1689,6 +1859,14 @@ const grammar: Grammar = {
             ...x[2] && {from: x[2][1]},
             ...x[3] && {for: x[3][1]},
         }) },
+    {"name": "spe_position$subexpression$1", "symbols": ["word"], "postprocess": kw('position')},
+    {"name": "spe_position$subexpression$2", "symbols": [(lexerAny.has("lparen") ? {type: "lparen"} : lparen), "expr_nostar"]},
+    {"name": "spe_position$subexpression$3", "symbols": [(lexerAny.has("kw_in") ? {type: "kw_in"} : kw_in), "expr_nostar"]},
+    {"name": "spe_position", "symbols": ["spe_position$subexpression$1", "spe_position$subexpression$2", "spe_position$subexpression$3", (lexerAny.has("rparen") ? {type: "rparen"} : rparen)], "postprocess":  x => track(x, {
+            type: 'position',
+            substring: x[1][1],
+            string: x[2][1],
+        }) },
     {"name": "various_binaries", "symbols": ["kw_at", "kw_time", "kw_zone"], "postprocess": () => 'AT TIME ZONE'},
     {"name": "createtable_statement$ebnf$1", "symbols": ["createtable_modifiers"], "postprocess": id},
     {"name": "createtable_statement$ebnf$1", "symbols": [], "postprocess": () => null},
@@ -1696,7 +1874,9 @@ const grammar: Grammar = {
     {"name": "createtable_statement$ebnf$2", "symbols": [], "postprocess": () => null},
     {"name": "createtable_statement$ebnf$3", "symbols": ["createtable_opts"], "postprocess": id},
     {"name": "createtable_statement$ebnf$3", "symbols": [], "postprocess": () => null},
-    {"name": "createtable_statement", "symbols": [(lexerAny.has("kw_create") ? {type: "kw_create"} : kw_create), "createtable_statement$ebnf$1", (lexerAny.has("kw_table") ? {type: "kw_table"} : kw_table), "createtable_statement$ebnf$2", "qname", "lparen", "createtable_declarationlist", "rparen", "createtable_statement$ebnf$3"], "postprocess":  x => {
+    {"name": "createtable_statement$ebnf$4", "symbols": ["createtable_tablespace"], "postprocess": id},
+    {"name": "createtable_statement$ebnf$4", "symbols": [], "postprocess": () => null},
+    {"name": "createtable_statement", "symbols": [(lexerAny.has("kw_create") ? {type: "kw_create"} : kw_create), "createtable_statement$ebnf$1", (lexerAny.has("kw_table") ? {type: "kw_table"} : kw_table), "createtable_statement$ebnf$2", "qname", "lparen", "createtable_declarationlist", "rparen", "createtable_statement$ebnf$3", "createtable_statement$ebnf$4"], "postprocess":  x => {
         
             const cols = x[6].filter((v: any) => 'kind' in v);
             const constraints = x[6].filter((v: any) => !('kind' in v));
@@ -1708,9 +1888,11 @@ const grammar: Grammar = {
                 columns: cols,
                 ...unwrap(x[1]),
                 ...constraints.length ? { constraints } : {},
-                ...last(x),
+                ...x[8],
+                ...x[9] ? { tablespace: x[9] } : {},
             });
         } },
+    {"name": "createtable_tablespace", "symbols": ["kw_tablespace", "ident"], "postprocess": x => asName(last(x))},
     {"name": "createtable_modifiers", "symbols": ["kw_unlogged"], "postprocess": x => x[0] ? { unlogged: true } : {}},
     {"name": "createtable_modifiers", "symbols": ["m_locglob"]},
     {"name": "createtable_modifiers", "symbols": ["m_tmp"]},
@@ -1781,6 +1963,12 @@ const grammar: Grammar = {
     {"name": "createtable_constraint_foreignkey_onsometing$subexpression$1", "symbols": ["kw_partial"]},
     {"name": "createtable_constraint_foreignkey_onsometing$subexpression$1", "symbols": ["kw_simple"]},
     {"name": "createtable_constraint_foreignkey_onsometing", "symbols": ["kw_match", "createtable_constraint_foreignkey_onsometing$subexpression$1"], "postprocess": x => track(x, {match: toStr(last(x))})},
+    {"name": "createtable_constraint_foreignkey_onsometing$ebnf$1", "symbols": [(lexerAny.has("kw_not") ? {type: "kw_not"} : kw_not)], "postprocess": id},
+    {"name": "createtable_constraint_foreignkey_onsometing$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "createtable_constraint_foreignkey_onsometing", "symbols": ["createtable_constraint_foreignkey_onsometing$ebnf$1", (lexerAny.has("kw_deferrable") ? {type: "kw_deferrable"} : kw_deferrable)], "postprocess": x => track(x, {deferrable: !x[0]})},
+    {"name": "createtable_constraint_foreignkey_onsometing$subexpression$2", "symbols": ["kw_deferred"]},
+    {"name": "createtable_constraint_foreignkey_onsometing$subexpression$2", "symbols": ["kw_immediate"]},
+    {"name": "createtable_constraint_foreignkey_onsometing", "symbols": [(lexerAny.has("kw_initially") ? {type: "kw_initially"} : kw_initially), "createtable_constraint_foreignkey_onsometing$subexpression$2"], "postprocess": x => track(x, {initiallyDeferred: toStr(last(x)).toLowerCase() === 'deferred'})},
     {"name": "createtable_constraint_on_action$subexpression$1", "symbols": ["kw_cascade"]},
     {"name": "createtable_constraint_on_action$subexpression$1$subexpression$1", "symbols": ["kw_no", "kw_action"]},
     {"name": "createtable_constraint_on_action$subexpression$1", "symbols": ["createtable_constraint_on_action$subexpression$1$subexpression$1"]},
@@ -1949,17 +2137,231 @@ const grammar: Grammar = {
             ... !!x[6] ? { version: asLit(x[6]) } : {},
             ... !!x[7] ? { from: asLit(x[7]) } : {},
         }) },
+    {"name": "createrole_statement$subexpression$1", "symbols": ["kw_role"]},
+    {"name": "createrole_statement$subexpression$1", "symbols": [(lexerAny.has("kw_user") ? {type: "kw_user"} : kw_user)]},
+    {"name": "createrole_statement$ebnf$1", "symbols": [(lexerAny.has("kw_with") ? {type: "kw_with"} : kw_with)], "postprocess": id},
+    {"name": "createrole_statement$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "createrole_statement$ebnf$2", "symbols": []},
+    {"name": "createrole_statement$ebnf$2", "symbols": ["createrole_statement$ebnf$2", "role_option"], "postprocess": (d) => d[0].concat([d[1]])},
+    {"name": "createrole_statement", "symbols": [(lexerAny.has("kw_create") ? {type: "kw_create"} : kw_create), "createrole_statement$subexpression$1", "ident", "createrole_statement$ebnf$1", "createrole_statement$ebnf$2"], "postprocess":  x => track(x, {
+            type: 'create role',
+            name: asName(x[2]),
+            // "user" (the keyword token) implies LOGIN
+            ...(toStr(unwrap(x[1])).toLowerCase() === 'user' ? { options: mergeRoleOptions([{ login: true }, ...(x[4] || [])]) } : { options: mergeRoleOptions(x[4] || []) }),
+        }) },
+    {"name": "role_option", "symbols": ["kw_superuser"], "postprocess": () => ({ superuser: true })},
+    {"name": "role_option", "symbols": ["kw_nosuperuser"], "postprocess": () => ({ superuser: false })},
+    {"name": "role_option", "symbols": ["kw_login"], "postprocess": () => ({ login: true })},
+    {"name": "role_option", "symbols": ["kw_nologin"], "postprocess": () => ({ login: false })},
+    {"name": "role_option", "symbols": ["kw_bypassrls"], "postprocess": () => ({ bypassRls: true })},
+    {"name": "role_option", "symbols": ["kw_nobypassrls"], "postprocess": () => ({ bypassRls: false })},
+    {"name": "role_option$subexpression$1", "symbols": ["kw_password", "string"]},
+    {"name": "role_option", "symbols": ["role_option$subexpression$1"], "postprocess": () => ({})},
+    {"name": "role_option", "symbols": ["kw_createdb"], "postprocess": () => ({})},
+    {"name": "role_option", "symbols": ["kw_nocreatedb"], "postprocess": () => ({})},
+    {"name": "role_option", "symbols": ["kw_createrole"], "postprocess": () => ({})},
+    {"name": "role_option", "symbols": ["kw_nocreaterole"], "postprocess": () => ({})},
+    {"name": "role_option", "symbols": ["kw_inherit"], "postprocess": () => ({})},
+    {"name": "role_option", "symbols": ["kw_noinherit"], "postprocess": () => ({})},
+    {"name": "createpolicy_statement$ebnf$1$subexpression$1$subexpression$1", "symbols": ["kw_permissive"]},
+    {"name": "createpolicy_statement$ebnf$1$subexpression$1$subexpression$1", "symbols": ["kw_restrictive"]},
+    {"name": "createpolicy_statement$ebnf$1$subexpression$1", "symbols": [(lexerAny.has("kw_as") ? {type: "kw_as"} : kw_as), "createpolicy_statement$ebnf$1$subexpression$1$subexpression$1"], "postprocess": x => toStr(x[1])},
+    {"name": "createpolicy_statement$ebnf$1", "symbols": ["createpolicy_statement$ebnf$1$subexpression$1"], "postprocess": id},
+    {"name": "createpolicy_statement$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "createpolicy_statement$ebnf$2$subexpression$1", "symbols": [(lexerAny.has("kw_for") ? {type: "kw_for"} : kw_for), "policy_command"], "postprocess": last},
+    {"name": "createpolicy_statement$ebnf$2", "symbols": ["createpolicy_statement$ebnf$2$subexpression$1"], "postprocess": id},
+    {"name": "createpolicy_statement$ebnf$2", "symbols": [], "postprocess": () => null},
+    {"name": "createpolicy_statement$ebnf$3$subexpression$1", "symbols": [(lexerAny.has("kw_to") ? {type: "kw_to"} : kw_to), "policy_role_list"], "postprocess": last},
+    {"name": "createpolicy_statement$ebnf$3", "symbols": ["createpolicy_statement$ebnf$3$subexpression$1"], "postprocess": id},
+    {"name": "createpolicy_statement$ebnf$3", "symbols": [], "postprocess": () => null},
+    {"name": "createpolicy_statement$ebnf$4$subexpression$1", "symbols": [(lexerAny.has("kw_using") ? {type: "kw_using"} : kw_using), "lparen", "expr", "rparen"], "postprocess": x => x[2]},
+    {"name": "createpolicy_statement$ebnf$4", "symbols": ["createpolicy_statement$ebnf$4$subexpression$1"], "postprocess": id},
+    {"name": "createpolicy_statement$ebnf$4", "symbols": [], "postprocess": () => null},
+    {"name": "createpolicy_statement$ebnf$5$subexpression$1", "symbols": [(lexerAny.has("kw_with") ? {type: "kw_with"} : kw_with), (lexerAny.has("kw_check") ? {type: "kw_check"} : kw_check), "lparen", "expr", "rparen"], "postprocess": x => x[3]},
+    {"name": "createpolicy_statement$ebnf$5", "symbols": ["createpolicy_statement$ebnf$5$subexpression$1"], "postprocess": id},
+    {"name": "createpolicy_statement$ebnf$5", "symbols": [], "postprocess": () => null},
+    {"name": "createpolicy_statement", "symbols": [(lexerAny.has("kw_create") ? {type: "kw_create"} : kw_create), "kw_policy", "ident", (lexerAny.has("kw_on") ? {type: "kw_on"} : kw_on), "qualified_name", "createpolicy_statement$ebnf$1", "createpolicy_statement$ebnf$2", "createpolicy_statement$ebnf$3", "createpolicy_statement$ebnf$4", "createpolicy_statement$ebnf$5"], "postprocess":  x => track(x, {
+            type: 'create policy',
+            name: asName(x[2]),
+            table: x[4],
+            ...(x[5] ? { permissive: x[5].toLowerCase() === 'permissive' } : {}),
+            ...(x[6] ? { for: x[6] } : {}),
+            ...(x[7] ? { roles: x[7] } : {}),
+            ...(x[8] ? { using: unwrap(x[8]) } : {}),
+            ...(x[9] ? { withCheck: unwrap(x[9]) } : {}),
+        }) },
+    {"name": "policy_command", "symbols": [(lexerAny.has("kw_all") ? {type: "kw_all"} : kw_all)], "postprocess": () => 'all'},
+    {"name": "policy_command", "symbols": [(lexerAny.has("kw_select") ? {type: "kw_select"} : kw_select)], "postprocess": () => 'select'},
+    {"name": "policy_command", "symbols": ["kw_insert"], "postprocess": () => 'insert'},
+    {"name": "policy_command", "symbols": ["kw_update"], "postprocess": () => 'update'},
+    {"name": "policy_command", "symbols": ["kw_delete"], "postprocess": () => 'delete'},
+    {"name": "policy_role_list$ebnf$1", "symbols": []},
+    {"name": "policy_role_list$ebnf$1$subexpression$1", "symbols": ["comma", "policy_role"], "postprocess": last},
+    {"name": "policy_role_list$ebnf$1", "symbols": ["policy_role_list$ebnf$1", "policy_role_list$ebnf$1$subexpression$1"], "postprocess": (d) => d[0].concat([d[1]])},
+    {"name": "policy_role_list", "symbols": ["policy_role", "policy_role_list$ebnf$1"], "postprocess": ([head, tail]) => [head, ...(tail || [])]},
+    {"name": "policy_role", "symbols": ["ident"], "postprocess": x => asName(unwrap(x))},
+    {"name": "policy_role", "symbols": [(lexerAny.has("kw_current_user") ? {type: "kw_current_user"} : kw_current_user)], "postprocess": x => track(x, { name: 'current_user' })},
+    {"name": "policy_role", "symbols": [(lexerAny.has("kw_current_role") ? {type: "kw_current_role"} : kw_current_role)], "postprocess": x => track(x, { name: 'current_role' })},
+    {"name": "policy_role", "symbols": [(lexerAny.has("kw_session_user") ? {type: "kw_session_user"} : kw_session_user)], "postprocess": x => track(x, { name: 'session_user' })},
+    {"name": "droppolicy_statement$ebnf$1", "symbols": ["kw_ifexists"], "postprocess": id},
+    {"name": "droppolicy_statement$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "droppolicy_statement$ebnf$2$subexpression$1", "symbols": ["kw_cascade"]},
+    {"name": "droppolicy_statement$ebnf$2$subexpression$1", "symbols": ["kw_restrict"]},
+    {"name": "droppolicy_statement$ebnf$2", "symbols": ["droppolicy_statement$ebnf$2$subexpression$1"], "postprocess": id},
+    {"name": "droppolicy_statement$ebnf$2", "symbols": [], "postprocess": () => null},
+    {"name": "droppolicy_statement", "symbols": ["kw_drop", "kw_policy", "droppolicy_statement$ebnf$1", "ident", (lexerAny.has("kw_on") ? {type: "kw_on"} : kw_on), "qualified_name", "droppolicy_statement$ebnf$2"], "postprocess":  x => track(x, {
+            type: 'drop policy',
+            name: asName(x[3]),
+            table: x[5],
+            ...(x[2] ? { ifExists: true } : {}),
+        }) },
+    {"name": "grant_statement$ebnf$1$subexpression$1", "symbols": [(lexerAny.has("kw_with") ? {type: "kw_with"} : kw_with), (lexerAny.has("kw_grant") ? {type: "kw_grant"} : kw_grant), "kw_option"], "postprocess": () => true},
+    {"name": "grant_statement$ebnf$1", "symbols": ["grant_statement$ebnf$1$subexpression$1"], "postprocess": id},
+    {"name": "grant_statement$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "grant_statement", "symbols": [(lexerAny.has("kw_grant") ? {type: "kw_grant"} : kw_grant), "grant_privileges", "grant_on_target", (lexerAny.has("kw_to") ? {type: "kw_to"} : kw_to), "grant_grantees", "grant_statement$ebnf$1"], "postprocess":  x => track(x, {
+            type: 'grant',
+            privileges: x[1],
+            on: x[2],
+            to: x[4],
+            ...(x[5] ? { withGrantOption: true } : {}),
+        }) },
+    {"name": "revoke_statement$ebnf$1$subexpression$1", "symbols": [(lexerAny.has("kw_grant") ? {type: "kw_grant"} : kw_grant), "kw_option", (lexerAny.has("kw_for") ? {type: "kw_for"} : kw_for)], "postprocess": () => true},
+    {"name": "revoke_statement$ebnf$1", "symbols": ["revoke_statement$ebnf$1$subexpression$1"], "postprocess": id},
+    {"name": "revoke_statement$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "revoke_statement$ebnf$2$subexpression$1", "symbols": ["kw_cascade"]},
+    {"name": "revoke_statement$ebnf$2$subexpression$1", "symbols": ["kw_restrict"]},
+    {"name": "revoke_statement$ebnf$2", "symbols": ["revoke_statement$ebnf$2$subexpression$1"], "postprocess": id},
+    {"name": "revoke_statement$ebnf$2", "symbols": [], "postprocess": () => null},
+    {"name": "revoke_statement", "symbols": ["kw_revoke", "revoke_statement$ebnf$1", "grant_privileges", "grant_on_target", (lexerAny.has("kw_from") ? {type: "kw_from"} : kw_from), "grant_grantees", "revoke_statement$ebnf$2"], "postprocess":  x => track(x, {
+            type: 'revoke',
+            privileges: x[2],
+            on: x[3],
+            from: x[5],
+            ...(x[1] ? { grantOptionFor: true } : {}),
+        }) },
+    {"name": "grant_privileges$ebnf$1", "symbols": ["kw_privileges"], "postprocess": id},
+    {"name": "grant_privileges$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "grant_privileges", "symbols": [(lexerAny.has("kw_all") ? {type: "kw_all"} : kw_all), "grant_privileges$ebnf$1"], "postprocess": () => 'all'},
+    {"name": "grant_privileges$ebnf$2", "symbols": []},
+    {"name": "grant_privileges$ebnf$2$subexpression$1", "symbols": ["comma", "grant_priv"], "postprocess": last},
+    {"name": "grant_privileges$ebnf$2", "symbols": ["grant_privileges$ebnf$2", "grant_privileges$ebnf$2$subexpression$1"], "postprocess": (d) => d[0].concat([d[1]])},
+    {"name": "grant_privileges", "symbols": ["grant_priv", "grant_privileges$ebnf$2"], "postprocess": ([head, tail]) => [head, ...(tail || [])]},
+    {"name": "grant_priv$subexpression$1", "symbols": [(lexerAny.has("kw_select") ? {type: "kw_select"} : kw_select)]},
+    {"name": "grant_priv$subexpression$1", "symbols": [(lexerAny.has("kw_references") ? {type: "kw_references"} : kw_references)]},
+    {"name": "grant_priv$subexpression$1", "symbols": ["kw_insert"]},
+    {"name": "grant_priv$subexpression$1", "symbols": ["kw_update"]},
+    {"name": "grant_priv$subexpression$1", "symbols": ["kw_delete"]},
+    {"name": "grant_priv$subexpression$1", "symbols": ["kw_truncate"]},
+    {"name": "grant_priv$subexpression$1", "symbols": ["kw_trigger"]},
+    {"name": "grant_priv$subexpression$1", "symbols": ["kw_usage"]},
+    {"name": "grant_priv$subexpression$1", "symbols": ["kw_execute"]},
+    {"name": "grant_priv$subexpression$1", "symbols": ["kw_connect"]},
+    {"name": "grant_priv$subexpression$1", "symbols": ["kw_temporary"]},
+    {"name": "grant_priv$subexpression$1", "symbols": ["kw_temp"]},
+    {"name": "grant_priv", "symbols": ["grant_priv$subexpression$1"], "postprocess": x => toStr(unwrap(x)).toLowerCase()},
+    {"name": "grant_on_target$ebnf$1$subexpression$1", "symbols": [(lexerAny.has("kw_table") ? {type: "kw_table"} : kw_table)]},
+    {"name": "grant_on_target$ebnf$1$subexpression$1", "symbols": ["kw_sequence"]},
+    {"name": "grant_on_target$ebnf$1", "symbols": ["grant_on_target$ebnf$1$subexpression$1"], "postprocess": id},
+    {"name": "grant_on_target$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "grant_on_target", "symbols": [(lexerAny.has("kw_on") ? {type: "kw_on"} : kw_on), "grant_on_target$ebnf$1", "grant_name_list"], "postprocess":  x => track(x, {
+            type: 'table',
+            names: x[2],
+        }) },
+    {"name": "grant_name_list$ebnf$1", "symbols": []},
+    {"name": "grant_name_list$ebnf$1$subexpression$1", "symbols": ["comma", "qualified_name"], "postprocess": last},
+    {"name": "grant_name_list$ebnf$1", "symbols": ["grant_name_list$ebnf$1", "grant_name_list$ebnf$1$subexpression$1"], "postprocess": (d) => d[0].concat([d[1]])},
+    {"name": "grant_name_list", "symbols": ["qualified_name", "grant_name_list$ebnf$1"], "postprocess": ([head, tail]) => [head, ...(tail || [])]},
+    {"name": "grant_grantees$ebnf$1", "symbols": []},
+    {"name": "grant_grantees$ebnf$1$subexpression$1", "symbols": ["comma", "grant_grantee"], "postprocess": last},
+    {"name": "grant_grantees$ebnf$1", "symbols": ["grant_grantees$ebnf$1", "grant_grantees$ebnf$1$subexpression$1"], "postprocess": (d) => d[0].concat([d[1]])},
+    {"name": "grant_grantees", "symbols": ["grant_grantee", "grant_grantees$ebnf$1"], "postprocess": ([head, tail]) => [head, ...(tail || [])]},
+    {"name": "grant_grantee$ebnf$1$subexpression$1", "symbols": [(lexerAny.has("kw_group") ? {type: "kw_group"} : kw_group)], "postprocess": () => null},
+    {"name": "grant_grantee$ebnf$1", "symbols": ["grant_grantee$ebnf$1$subexpression$1"], "postprocess": id},
+    {"name": "grant_grantee$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "grant_grantee", "symbols": ["grant_grantee$ebnf$1", "ident"], "postprocess": x => asName(x[1])},
+    {"name": "grant_grantee", "symbols": [(lexerAny.has("kw_current_user") ? {type: "kw_current_user"} : kw_current_user)], "postprocess": x => track(x, { name: 'current_user' })},
+    {"name": "grant_grantee", "symbols": [(lexerAny.has("kw_session_user") ? {type: "kw_session_user"} : kw_session_user)], "postprocess": x => track(x, { name: 'session_user' })},
+    {"name": "createtrigger_statement$ebnf$1$subexpression$1", "symbols": [(lexerAny.has("kw_constraint") ? {type: "kw_constraint"} : kw_constraint)], "postprocess": () => true},
+    {"name": "createtrigger_statement$ebnf$1", "symbols": ["createtrigger_statement$ebnf$1$subexpression$1"], "postprocess": id},
+    {"name": "createtrigger_statement$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "createtrigger_statement$ebnf$2$subexpression$1$ebnf$1", "symbols": ["kw_each"], "postprocess": id},
+    {"name": "createtrigger_statement$ebnf$2$subexpression$1$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "createtrigger_statement$ebnf$2$subexpression$1$subexpression$1", "symbols": ["kw_row"]},
+    {"name": "createtrigger_statement$ebnf$2$subexpression$1$subexpression$1", "symbols": ["kw_statement"]},
+    {"name": "createtrigger_statement$ebnf$2$subexpression$1", "symbols": [(lexerAny.has("kw_for") ? {type: "kw_for"} : kw_for), "createtrigger_statement$ebnf$2$subexpression$1$ebnf$1", "createtrigger_statement$ebnf$2$subexpression$1$subexpression$1"], "postprocess": x => toStr(last(x)).toLowerCase()},
+    {"name": "createtrigger_statement$ebnf$2", "symbols": ["createtrigger_statement$ebnf$2$subexpression$1"], "postprocess": id},
+    {"name": "createtrigger_statement$ebnf$2", "symbols": [], "postprocess": () => null},
+    {"name": "createtrigger_statement$ebnf$3$subexpression$1", "symbols": [(lexerAny.has("kw_when") ? {type: "kw_when"} : kw_when), "lparen", "expr", "rparen"], "postprocess": x => x[2]},
+    {"name": "createtrigger_statement$ebnf$3", "symbols": ["createtrigger_statement$ebnf$3$subexpression$1"], "postprocess": id},
+    {"name": "createtrigger_statement$ebnf$3", "symbols": [], "postprocess": () => null},
+    {"name": "createtrigger_statement$subexpression$1", "symbols": ["kw_function"]},
+    {"name": "createtrigger_statement$subexpression$1", "symbols": ["kw_procedure"]},
+    {"name": "createtrigger_statement$ebnf$4", "symbols": ["expr_list_raw"], "postprocess": id},
+    {"name": "createtrigger_statement$ebnf$4", "symbols": [], "postprocess": () => null},
+    {"name": "createtrigger_statement", "symbols": [(lexerAny.has("kw_create") ? {type: "kw_create"} : kw_create), "createtrigger_statement$ebnf$1", "kw_trigger", "ident", "trigger_timing", "trigger_events", (lexerAny.has("kw_on") ? {type: "kw_on"} : kw_on), "qualified_name", "createtrigger_statement$ebnf$2", "createtrigger_statement$ebnf$3", "kw_execute", "createtrigger_statement$subexpression$1", "qualified_name", "lparen", "createtrigger_statement$ebnf$4", "rparen"], "postprocess":  x => track(x, {
+            type: 'create trigger',
+            ...(x[1] ? { constraint: true } : {}),
+            name: asName(x[3]),
+            timing: x[4],
+            events: x[5],
+            table: x[7],
+            forEach: x[8] ?? 'statement',
+            ...(x[9] ? { when: unwrap(x[9]) } : {}),
+            execute: {
+                function: x[12],
+                arguments: x[14] ?? [],
+            },
+        }) },
+    {"name": "trigger_timing", "symbols": ["kw_before"], "postprocess": () => 'before'},
+    {"name": "trigger_timing", "symbols": ["kw_after"], "postprocess": () => 'after'},
+    {"name": "trigger_timing", "symbols": ["kw_instead", "kw_of"], "postprocess": () => 'instead of'},
+    {"name": "trigger_events$ebnf$1", "symbols": []},
+    {"name": "trigger_events$ebnf$1$subexpression$1", "symbols": [(lexerAny.has("kw_or") ? {type: "kw_or"} : kw_or), "trigger_event"], "postprocess": last},
+    {"name": "trigger_events$ebnf$1", "symbols": ["trigger_events$ebnf$1", "trigger_events$ebnf$1$subexpression$1"], "postprocess": (d) => d[0].concat([d[1]])},
+    {"name": "trigger_events", "symbols": ["trigger_event", "trigger_events$ebnf$1"], "postprocess": ([head, tail]) => [head, ...(tail || [])]},
+    {"name": "trigger_event", "symbols": ["kw_insert"], "postprocess": x => track(x, { event: 'insert' })},
+    {"name": "trigger_event", "symbols": ["kw_delete"], "postprocess": x => track(x, { event: 'delete' })},
+    {"name": "trigger_event", "symbols": ["kw_truncate"], "postprocess": x => track(x, { event: 'truncate' })},
+    {"name": "trigger_event$ebnf$1$subexpression$1", "symbols": ["kw_of", "collist"], "postprocess": last},
+    {"name": "trigger_event$ebnf$1", "symbols": ["trigger_event$ebnf$1$subexpression$1"], "postprocess": id},
+    {"name": "trigger_event$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "trigger_event", "symbols": ["kw_update", "trigger_event$ebnf$1"], "postprocess":  x => track(x, {
+            event: 'update',
+            ...(x[1] ? { columns: x[1].map(asName) } : {}),
+        }) },
     {"name": "simplestatements_all", "symbols": ["simplestatements_start_transaction"]},
     {"name": "simplestatements_all", "symbols": ["simplestatements_commit"]},
     {"name": "simplestatements_all", "symbols": ["simplestatements_rollback"]},
+    {"name": "simplestatements_all", "symbols": ["simplestatements_savepoint"]},
+    {"name": "simplestatements_all", "symbols": ["simplestatements_release"]},
     {"name": "simplestatements_all", "symbols": ["simplestatements_tablespace"]},
     {"name": "simplestatements_all", "symbols": ["simplestatements_set"]},
+    {"name": "simplestatements_all", "symbols": ["simplestatements_set_role"]},
+    {"name": "simplestatements_all", "symbols": ["simplestatements_reset"]},
     {"name": "simplestatements_all", "symbols": ["simplestatements_show"]},
     {"name": "simplestatements_all", "symbols": ["simplestatements_begin"]},
     {"name": "simplestatements_start_transaction$subexpression$1", "symbols": ["kw_start", "kw_transaction"]},
     {"name": "simplestatements_start_transaction", "symbols": ["simplestatements_start_transaction$subexpression$1"], "postprocess": x => track(x, { type: 'start transaction' })},
     {"name": "simplestatements_commit", "symbols": ["kw_commit"], "postprocess": x => track(x, { type: 'commit' })},
-    {"name": "simplestatements_rollback", "symbols": ["kw_rollback"], "postprocess": x => track(x, { type: 'rollback' })},
+    {"name": "simplestatements_rollback$ebnf$1$subexpression$1$ebnf$1", "symbols": ["kw_savepoint"], "postprocess": id},
+    {"name": "simplestatements_rollback$ebnf$1$subexpression$1$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "simplestatements_rollback$ebnf$1$subexpression$1", "symbols": [(lexerAny.has("kw_to") ? {type: "kw_to"} : kw_to), "simplestatements_rollback$ebnf$1$subexpression$1$ebnf$1", "ident"], "postprocess": last},
+    {"name": "simplestatements_rollback$ebnf$1", "symbols": ["simplestatements_rollback$ebnf$1$subexpression$1"], "postprocess": id},
+    {"name": "simplestatements_rollback$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "simplestatements_rollback", "symbols": ["kw_rollback", "simplestatements_rollback$ebnf$1"], "postprocess":  x => track(x, {
+            type: 'rollback',
+            ...x[1] && { to: asName(unwrap(x[1])) },
+        }) },
+    {"name": "simplestatements_savepoint", "symbols": ["kw_savepoint", "ident"], "postprocess":  x => track(x, {
+            type: 'savepoint',
+            name: asName(x[1]),
+        }) },
+    {"name": "simplestatements_release$ebnf$1", "symbols": ["kw_savepoint"], "postprocess": id},
+    {"name": "simplestatements_release$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "simplestatements_release", "symbols": ["kw_release", "simplestatements_release$ebnf$1", "ident"], "postprocess":  x => track(x, {
+            type: 'release savepoint',
+            name: asName(x[2]),
+        }) },
     {"name": "simplestatements_tablespace", "symbols": ["kw_tablespace", "word"], "postprocess": x => track(x, {
            type: 'tablespace',
            tablespace: asName(x[1]),
@@ -2010,6 +2412,24 @@ const grammar: Grammar = {
     {"name": "simplestatements_set_val_raw", "symbols": ["simplestatements_set_val_raw$subexpression$2"], "postprocess": x => track(x, { type: 'identifier', name: unwrap(x).value })},
     {"name": "simplestatements_set_val_raw", "symbols": [(lexerAny.has("quoted_word") ? {type: "quoted_word"} : quoted_word)], "postprocess": x => track(x, { type: 'identifier', doubleQuoted: true, name: unwrap(x).value })},
     {"name": "simplestatements_show", "symbols": ["kw_show", "ident"], "postprocess": x => track(x, { type: 'show', variable: asName(x[1]) })},
+    {"name": "simplestatements_set_role$ebnf$1$subexpression$1", "symbols": ["kw_session"]},
+    {"name": "simplestatements_set_role$ebnf$1$subexpression$1", "symbols": ["kw_local"]},
+    {"name": "simplestatements_set_role$ebnf$1", "symbols": ["simplestatements_set_role$ebnf$1$subexpression$1"], "postprocess": id},
+    {"name": "simplestatements_set_role$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "simplestatements_set_role", "symbols": ["kw_set", "simplestatements_set_role$ebnf$1", "kw_role", "ident"], "postprocess":  x => {
+            const r = asName(x[3]);
+            return track(x, {
+                type: 'set role',
+                scope: unwrap(x[1])?.toLowerCase(),
+                ...(r.name.toLowerCase() === 'none' ? {} : { role: r }),
+            });
+        } },
+    {"name": "simplestatements_reset$subexpression$1", "symbols": [(lexerAny.has("kw_all") ? {type: "kw_all"} : kw_all)], "postprocess": () => 'all'},
+    {"name": "simplestatements_reset$subexpression$1", "symbols": ["ident"]},
+    {"name": "simplestatements_reset", "symbols": ["kw_reset", "simplestatements_reset$subexpression$1"], "postprocess":  x => track(x, {
+            type: 'reset',
+            identifier: unwrap(x[1]) === 'all' ? 'all' : asName(unwrap(x[1])),
+        }) },
     {"name": "create_schema$subexpression$1", "symbols": [(lexerAny.has("kw_create") ? {type: "kw_create"} : kw_create), "kw_schema"]},
     {"name": "create_schema$ebnf$1", "symbols": ["kw_ifnotexists"], "postprocess": id},
     {"name": "create_schema$ebnf$1", "symbols": [], "postprocess": () => null},
@@ -2258,9 +2678,18 @@ const grammar: Grammar = {
     {"name": "altertable_action", "symbols": ["altertable_add_constraint"]},
     {"name": "altertable_action", "symbols": ["altertable_drop_constraint"]},
     {"name": "altertable_action", "symbols": ["altertable_owner"]},
+    {"name": "altertable_action", "symbols": ["altertable_row_security"]},
     {"name": "altertable_rename_table", "symbols": ["kw_rename", (lexerAny.has("kw_to") ? {type: "kw_to"} : kw_to), "word"], "postprocess":  x => track(x, {
             type: 'rename',
             to: asName(last(x)),
+        }) },
+    {"name": "altertable_row_security$subexpression$1", "symbols": ["kw_enable"]},
+    {"name": "altertable_row_security$subexpression$1", "symbols": ["kw_disable"]},
+    {"name": "altertable_row_security$subexpression$1", "symbols": ["kw_force"]},
+    {"name": "altertable_row_security$subexpression$1", "symbols": ["kw_no", "kw_force"], "postprocess": () => 'no force'},
+    {"name": "altertable_row_security", "symbols": ["altertable_row_security$subexpression$1", "kw_row", "kw_level", "kw_security"], "postprocess":  x => track(x, {
+            type: 'row level security',
+            action: (() => { const v = unwrap(x[0]); return typeof v === 'string' ? v : toStr(v); })(),
         }) },
     {"name": "altertable_rename_column$ebnf$1", "symbols": ["kw_column"], "postprocess": id},
     {"name": "altertable_rename_column$ebnf$1", "symbols": [], "postprocess": () => null},
@@ -2526,10 +2955,25 @@ const grammar: Grammar = {
                 ... x[4] && {cascade: toStr(x[4]) },
             });
         }},
+    {"name": "drop_trigger_statement$ebnf$1", "symbols": ["kw_ifexists"], "postprocess": id},
+    {"name": "drop_trigger_statement$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "drop_trigger_statement$ebnf$2$subexpression$1", "symbols": ["kw_cascade"]},
+    {"name": "drop_trigger_statement$ebnf$2$subexpression$1", "symbols": ["kw_restrict"]},
+    {"name": "drop_trigger_statement$ebnf$2", "symbols": ["drop_trigger_statement$ebnf$2$subexpression$1"], "postprocess": id},
+    {"name": "drop_trigger_statement$ebnf$2", "symbols": [], "postprocess": () => null},
+    {"name": "drop_trigger_statement", "symbols": ["kw_drop", "kw_trigger", "drop_trigger_statement$ebnf$1", "ident", (lexerAny.has("kw_on") ? {type: "kw_on"} : kw_on), "qualified_name", "drop_trigger_statement$ebnf$2"], "postprocess":  (x: any) => track(x, {
+            type: 'drop trigger',
+            ...x[2] && { ifExists: true },
+            name: asName(x[3]),
+            onTable: x[5],
+            ...x[6] && { cascade: toStr(x[6]) },
+        }) },
     {"name": "drop_what", "symbols": [(lexerAny.has("kw_table") ? {type: "kw_table"} : kw_table)], "postprocess": x => track(x, { type: 'drop table' })},
     {"name": "drop_what", "symbols": ["kw_sequence"], "postprocess": x => track(x, { type: 'drop sequence' })},
     {"name": "drop_what", "symbols": ["kw_type"], "postprocess": x => track(x, { type: 'drop type' })},
-    {"name": "drop_what", "symbols": ["kw_trigger"], "postprocess": x => track(x, { type: 'drop trigger' })},
+    {"name": "drop_what$subexpression$1", "symbols": ["kw_role"]},
+    {"name": "drop_what$subexpression$1", "symbols": [(lexerAny.has("kw_user") ? {type: "kw_user"} : kw_user)]},
+    {"name": "drop_what", "symbols": ["drop_what$subexpression$1"], "postprocess": x => track(x, { type: 'drop role' })},
     {"name": "drop_what$ebnf$1", "symbols": [(lexerAny.has("kw_concurrently") ? {type: "kw_concurrently"} : kw_concurrently)], "postprocess": id},
     {"name": "drop_what$ebnf$1", "symbols": [], "postprocess": () => null},
     {"name": "drop_what", "symbols": ["kw_index", "drop_what$ebnf$1"], "postprocess":  x => track(x, {
@@ -2542,10 +2986,12 @@ const grammar: Grammar = {
             in: unwrap(x[2]),
         }) },
     {"name": "with_recursive_statement$subexpression$1", "symbols": [(lexerAny.has("kw_with") ? {type: "kw_with"} : kw_with), "kw_recursive"]},
-    {"name": "with_recursive_statement", "symbols": ["with_recursive_statement$subexpression$1", "ident", "collist_paren", (lexerAny.has("kw_as") ? {type: "kw_as"} : kw_as), "lparen", "union_statement", "rparen", "with_statement_statement"], "postprocess":  x => track(x, {
+    {"name": "with_recursive_statement$ebnf$1", "symbols": ["collist_paren"], "postprocess": id},
+    {"name": "with_recursive_statement$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "with_recursive_statement", "symbols": ["with_recursive_statement$subexpression$1", "ident", "with_recursive_statement$ebnf$1", (lexerAny.has("kw_as") ? {type: "kw_as"} : kw_as), "lparen", "union_statement", "rparen", "with_statement_statement"], "postprocess":  x => track(x, {
             type: 'with recursive',
             alias: asName(x[1]),
-            columnNames: x[2].map(asName),
+            ...x[2] && { columnNames: x[2].map(asName) },
             bind: x[5],
             in: unwrap(x[7]),
         }) },
@@ -2601,6 +3047,36 @@ const grammar: Grammar = {
                 ...x[2] ? { collate: x[2][1] }: {},
             })
         } },
+    {"name": "createdomain_statement$ebnf$1", "symbols": [(lexerAny.has("kw_as") ? {type: "kw_as"} : kw_as)], "postprocess": id},
+    {"name": "createdomain_statement$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "createdomain_statement$ebnf$2", "symbols": ["createtable_collate"], "postprocess": id},
+    {"name": "createdomain_statement$ebnf$2", "symbols": [], "postprocess": () => null},
+    {"name": "createdomain_statement$ebnf$3", "symbols": []},
+    {"name": "createdomain_statement$ebnf$3", "symbols": ["createdomain_statement$ebnf$3", "domain_item"], "postprocess": (d) => d[0].concat([d[1]])},
+    {"name": "createdomain_statement", "symbols": [(lexerAny.has("kw_create") ? {type: "kw_create"} : kw_create), "kw_domain", "qualified_name", "createdomain_statement$ebnf$1", "data_type", "createdomain_statement$ebnf$2", "createdomain_statement$ebnf$3"], "postprocess":  x => {
+            const items = x[6] || [];
+            const constraints = items.filter((i: any) => i.type !== 'default');
+            const def = items.find((i: any) => i.type === 'default');
+            return track(x, {
+                type: 'create domain',
+                name: x[2],
+                dataType: x[4],
+                ...(x[5] ? { collate: x[5][1] } : {}),
+                ...(constraints.length ? { constraints } : {}),
+                ...(def ? { default: def.default } : {}),
+            });
+        } },
+    {"name": "domain_item$ebnf$1$subexpression$1", "symbols": [(lexerAny.has("kw_constraint") ? {type: "kw_constraint"} : kw_constraint), "word"], "postprocess": x => asName(x[1])},
+    {"name": "domain_item$ebnf$1", "symbols": ["domain_item$ebnf$1$subexpression$1"], "postprocess": id},
+    {"name": "domain_item$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "domain_item", "symbols": ["domain_item$ebnf$1", "domain_item_def"], "postprocess":  x => track(x, {
+            ...(x[0] ? { constraintName: x[0] } : {}),
+            ...unwrap(x[1]),
+        }) },
+    {"name": "domain_item_def", "symbols": ["kw_not_null"], "postprocess": () => ({ type: 'not null' })},
+    {"name": "domain_item_def", "symbols": [(lexerAny.has("kw_null") ? {type: "kw_null"} : kw_null)], "postprocess": () => ({ type: 'null' })},
+    {"name": "domain_item_def", "symbols": [(lexerAny.has("kw_check") ? {type: "kw_check"} : kw_check), "expr_paren"], "postprocess": x => ({ type: 'check', expr: unwrap(x[1]) })},
+    {"name": "domain_item_def", "symbols": [(lexerAny.has("kw_default") ? {type: "kw_default"} : kw_default), "expr"], "postprocess": x => ({ type: 'default', default: unwrap(x[1]) })},
     {"name": "altertype_statement$subexpression$1", "symbols": ["altertype_enum_add_value"]},
     {"name": "altertype_statement$subexpression$1", "symbols": ["altertype_enum_rename"]},
     {"name": "altertype_statement", "symbols": ["kw_alter", "kw_type", "qualified_name", "altertype_statement$subexpression$1"], "postprocess":  x => track(x, {
@@ -2656,6 +3132,14 @@ const grammar: Grammar = {
     {"name": "deallocate_target", "symbols": ["deallocate_name"], "postprocess": unwrap},
     {"name": "deallocate_name", "symbols": ["ident"], "postprocess": x => track(x, asName(x[0]) )},
     {"name": "deallocate_all", "symbols": [(lexerAny.has("kw_all") ? {type: "kw_all"} : kw_all)], "postprocess": x => track(x, { option: 'all' })},
+    {"name": "execute_statement$ebnf$1$subexpression$1", "symbols": ["lparen", "expr_list_raw", "rparen"], "postprocess": x => x[1]},
+    {"name": "execute_statement$ebnf$1", "symbols": ["execute_statement$ebnf$1$subexpression$1"], "postprocess": id},
+    {"name": "execute_statement$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "execute_statement", "symbols": ["kw_execute", "ident", "execute_statement$ebnf$1"], "postprocess":  x => track(x, {
+            type: 'execute',
+            name: asName(x[1]),
+            ...x[2] && { args: x[2] },
+        }) },
     {"name": "create_view_statements", "symbols": ["create_view"]},
     {"name": "create_view_statements", "symbols": ["create_materialized_view"]},
     {"name": "create_view$ebnf$1$subexpression$1", "symbols": [(lexerAny.has("kw_or") ? {type: "kw_or"} : kw_or), "kw_replace"]},
@@ -2829,7 +3313,12 @@ const grammar: Grammar = {
     {"name": "func_spec$ebnf$1", "symbols": [], "postprocess": () => null},
     {"name": "func_spec$subexpression$2", "symbols": ["word"], "postprocess": kw('leakproof')},
     {"name": "func_spec", "symbols": ["func_spec$ebnf$1", "func_spec$subexpression$2"], "postprocess": x => track(x, { leakproof: !x[0] })},
-    {"name": "func_spec", "symbols": ["func_returns"], "postprocess": x => track(x, { returns: unwrap(x) })},
+    {"name": "func_spec", "symbols": ["func_returns"], "postprocess":  x => {
+            const r = unwrap(x);
+            return r && r.__setof
+                ? track(x, { returns: r.__setof, setof: true })
+                : track(x, { returns: r });
+        } },
     {"name": "func_spec$subexpression$3", "symbols": ["word"], "postprocess": kw('called')},
     {"name": "func_spec", "symbols": ["func_spec$subexpression$3", "oninp"], "postprocess": () => ({ onNullInput: 'call' })},
     {"name": "func_spec$subexpression$4", "symbols": ["word"], "postprocess": kw('returns')},
@@ -2842,6 +3331,7 @@ const grammar: Grammar = {
     {"name": "oninp$subexpression$1", "symbols": ["word"], "postprocess": kw('input')},
     {"name": "oninp", "symbols": [(lexerAny.has("kw_on") ? {type: "kw_on"} : kw_on), (lexerAny.has("kw_null") ? {type: "kw_null"} : kw_null), "oninp$subexpression$1"]},
     {"name": "func_returns", "symbols": ["kw_returns", "data_type"], "postprocess": last},
+    {"name": "func_returns", "symbols": ["kw_returns", "kw_setof", "data_type"], "postprocess": x => ({ __setof: last(x) })},
     {"name": "func_returns$macrocall$2", "symbols": ["func_ret_table_col"]},
     {"name": "func_returns$macrocall$1$ebnf$1", "symbols": []},
     {"name": "func_returns$macrocall$1$ebnf$1$subexpression$1", "symbols": [(lexerAny.has("comma") ? {type: "comma"} : comma), "func_returns$macrocall$2"], "postprocess": last},
@@ -2909,9 +3399,16 @@ const grammar: Grammar = {
     {"name": "statement", "symbols": ["statement_noprep"]},
     {"name": "statement", "symbols": ["prepare"]},
     {"name": "statement", "symbols": ["deallocate"]},
+    {"name": "statement", "symbols": ["execute_statement"]},
     {"name": "statement_noprep", "symbols": ["selection"]},
     {"name": "statement_noprep", "symbols": ["createtable_statement"]},
     {"name": "statement_noprep", "symbols": ["createextension_statement"]},
+    {"name": "statement_noprep", "symbols": ["createrole_statement"]},
+    {"name": "statement_noprep", "symbols": ["createpolicy_statement"]},
+    {"name": "statement_noprep", "symbols": ["droppolicy_statement"]},
+    {"name": "statement_noprep", "symbols": ["grant_statement"]},
+    {"name": "statement_noprep", "symbols": ["revoke_statement"]},
+    {"name": "statement_noprep", "symbols": ["createtrigger_statement"]},
     {"name": "statement_noprep", "symbols": ["createindex_statement"]},
     {"name": "statement_noprep", "symbols": ["simplestatements_all"]},
     {"name": "statement_noprep", "symbols": ["insert_statement"]},
@@ -2922,7 +3419,9 @@ const grammar: Grammar = {
     {"name": "statement_noprep", "symbols": ["create_sequence_statement"]},
     {"name": "statement_noprep", "symbols": ["alter_sequence_statement"]},
     {"name": "statement_noprep", "symbols": ["drop_statement"]},
+    {"name": "statement_noprep", "symbols": ["drop_trigger_statement"]},
     {"name": "statement_noprep", "symbols": ["createtype_statement"]},
+    {"name": "statement_noprep", "symbols": ["createdomain_statement"]},
     {"name": "statement_noprep", "symbols": ["altertype_statement"]},
     {"name": "statement_noprep", "symbols": ["create_view_statements"]},
     {"name": "statement_noprep", "symbols": ["refresh_view_statements"]},

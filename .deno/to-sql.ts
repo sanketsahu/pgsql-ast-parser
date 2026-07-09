@@ -1,7 +1,7 @@
 import { IAstPartialMapper, AstDefaultMapper } from './ast-mapper.ts';
 import { astVisitor, IAstVisitor, IAstFullVisitor } from './ast-visitor.ts';
 import { NotSupported, nil, ReplaceReturnType, NoExtraProperties } from './utils.ts';
-import { TableConstraint, JoinClause, ColumnConstraint, AlterSequenceStatement, CreateSequenceStatement, AlterSequenceSetOptions, CreateSequenceOptions, QName, SetGlobalValue, AlterColumnAddGenerated, QColumn, Name, OrderByStatement, QNameAliased } from './syntax/ast.ts';
+import { TableConstraint, JoinClause, ColumnConstraint, AlterSequenceStatement, CreateSequenceStatement, AlterSequenceSetOptions, CreateSequenceOptions, QName, SetGlobalValue, AlterColumnAddGenerated, QColumn, Name, OrderByStatement, QNameAliased, FrameBound } from './syntax/ast.ts';
 import { literal } from './pg-escape.ts';
 import { sqlKeywords } from './keywords.ts';
 
@@ -69,6 +69,12 @@ function addConstraint(c: ColumnConstraint | TableConstraint, m: IAstVisitor) {
             }
             if (c.onUpdate) {
                 ret.push(' ON UPDATE ', c.onUpdate);
+            }
+            if (c.deferrable !== undefined) {
+                ret.push(c.deferrable ? ' DEFERRABLE' : ' NOT DEFERRABLE');
+            }
+            if (c.initiallyDeferred !== undefined) {
+                ret.push(' INITIALLY ', c.initiallyDeferred ? 'DEFERRED' : 'IMMEDIATE');
             }
             break;
         case 'primary key':
@@ -352,8 +358,44 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
         ret.push(' ');
     },
 
+    createDomain: c => {
+        ret.push('CREATE DOMAIN ');
+        visitQualifiedName(c.name);
+        ret.push(' AS ');
+        m.dataType(c.dataType);
+        if (c.collate) {
+            ret.push(' COLLATE ', name(c.collate));
+        }
+        if (c.default) {
+            ret.push(' DEFAULT ');
+            m.expr(c.default);
+        }
+        for (const cst of c.constraints ?? []) {
+            if (cst.constraintName) {
+                ret.push(' CONSTRAINT ', name(cst.constraintName));
+            }
+            switch (cst.type) {
+                case 'not null':
+                    ret.push(' NOT NULL');
+                    break;
+                case 'null':
+                    ret.push(' NULL');
+                    break;
+                case 'check':
+                    ret.push(' CHECK (');
+                    m.expr(cst.expr);
+                    ret.push(')');
+                    break;
+            }
+        }
+    },
+
     setTableOwner: o => {
         ret.push(' OWNER TO ', name(o.to));
+    },
+
+    setRowLevelSecurity: c => {
+        ret.push(' ', c.action.toUpperCase(), ' ROW LEVEL SECURITY');
     },
 
     alterColumnSimple: c => ret.push(c.type),
@@ -425,6 +467,8 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
                 return m.dropConstraint(change, table);
             case 'owner':
                 return m.setTableOwner(change, table);
+            case 'row level security':
+                return m.setRowLevelSecurity(change, table);
             default:
                 throw NotSupported.never(change);
         }
@@ -489,6 +533,14 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
         ret.push(')');
     },
 
+    callPosition: p => {
+        ret.push('POSITION(');
+        m.expr(p.substring);
+        ret.push(' IN ');
+        m.expr(p.string);
+        ret.push(')');
+    },
+
     binary: v => {
         m.expr(v.left);
         visitOp(v);
@@ -527,6 +579,26 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
                 visitOrderBy(m, v.over.orderBy);
                 ret.push(' ');
             }
+            if (v.over.frame) {
+                const { unit, start, end } = v.over.frame;
+                ret.push(unit.toUpperCase(), ' ');
+                const bound = (b: FrameBound) => {
+                    if (b.value) {
+                        m.expr(b.value);
+                        ret.push(' ', b.type.toUpperCase(), ' ');
+                    } else {
+                        ret.push(b.type.toUpperCase(), ' ');
+                    }
+                };
+                if (end) {
+                    ret.push('BETWEEN ');
+                    bound(start);
+                    ret.push('AND ');
+                    bound(end);
+                } else {
+                    bound(start);
+                }
+            }
             ret.push(') ');
         }
     },
@@ -563,9 +635,14 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
                 ret.push(c.value ? 'true' : 'false');
                 break;
             case 'integer':
-                ret.push(c.value.toString(10));
+                // prefer the exact source digits when the JS number would lose precision
+                ret.push(c.valueText ?? c.value.toString(10));
                 break;
             case 'numeric':
+                if (c.valueText) {
+                    ret.push(c.valueText);
+                    break;
+                }
                 ret.push(c.value.toString());
                 if (Number.isInteger(c.value)) {
                     ret.push('.');
@@ -737,7 +814,7 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
                 case undefined:
                 case null:
                 case 'array':
-                    ret.push(' RETURNS ');
+                    ret.push(c.setof ? ' RETURNS SETOF ' : ' RETURNS ');
                     m.dataType(c.returns);
                     break;
                 default:
@@ -807,11 +884,11 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
     },
 
     withRecursive: val => {
-        ret.push('WITH RECURSIVE '
-            , name(val.alias)
-            , '('
-            , ...val.columnNames.map(name).join(', ')
-            , ') AS (');
+        ret.push('WITH RECURSIVE ', name(val.alias));
+        if (val.columnNames) {
+            ret.push('(', ...val.columnNames.map(name).join(', '), ')');
+        }
+        ret.push(' AS (');
         m.union(val.bind);
         ret.push(') ');
         m.statement(val.in);
@@ -995,6 +1072,9 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
         if (t.inherits?.length) {
             ret.push(' INHERITS ');
             list(t.inherits, i => visitQualifiedName(i), true);
+        }
+        if (t.tablespace) {
+            ret.push(' TABLESPACE ', name(t.tablespace));
         }
     },
 
@@ -1233,6 +1313,13 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
     },
 
     member: e => {
+        if (e.op === '.') {
+            // composite field access: (operand).field
+            ret.push('(');
+            m.expr(e.operand);
+            ret.push(').', ident(e.member as string));
+            return;
+        }
         m.expr(e.operand);
         ret.push(e.op);
         ret.push(typeof e.member === 'number'
@@ -1414,6 +1501,105 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
         ret.push('SHOW ', name(s.variable));
     },
 
+    createRole: r => {
+        ret.push('CREATE ROLE ', name(r.name));
+        const o = r.options;
+        if (o.superuser !== undefined) ret.push(o.superuser ? ' SUPERUSER' : ' NOSUPERUSER');
+        if (o.login !== undefined) ret.push(o.login ? ' LOGIN' : ' NOLOGIN');
+        if (o.bypassRls !== undefined) ret.push(o.bypassRls ? ' BYPASSRLS' : ' NOBYPASSRLS');
+    },
+
+    setRole: r => {
+        ret.push('SET ');
+        if (r.scope) ret.push(r.scope.toUpperCase(), ' ');
+        ret.push('ROLE ', r.role ? name(r.role) : 'NONE');
+    },
+
+    reset: r => {
+        ret.push('RESET ', r.identifier === 'all' ? 'ALL' : name(r.identifier));
+    },
+
+    createPolicy: p => {
+        ret.push('CREATE POLICY ', name(p.name), ' ON ');
+        visitQualifiedName(p.table);
+        if (p.permissive !== undefined) {
+            ret.push(' AS ', p.permissive ? 'PERMISSIVE' : 'RESTRICTIVE');
+        }
+        if (p.for) {
+            ret.push(' FOR ', p.for.toUpperCase());
+        }
+        if (p.roles?.length) {
+            ret.push(' TO ');
+            list(p.roles, r => ret.push(name(r)), false);
+        }
+        if (p.using) {
+            ret.push(' USING (');
+            m.expr(p.using);
+            ret.push(')');
+        }
+        if (p.withCheck) {
+            ret.push(' WITH CHECK (');
+            m.expr(p.withCheck);
+            ret.push(')');
+        }
+    },
+
+    createTrigger: t => {
+        ret.push('CREATE ', t.constraint ? 'CONSTRAINT ' : '', 'TRIGGER ', name(t.name), ' ', t.timing.toUpperCase(), ' ');
+        ret.push(t.events.map(e => e.event.toUpperCase() + (e.columns ? ' OF ' + e.columns.map(name).join(', ') : '')).join(' OR '));
+        ret.push(' ON ');
+        visitQualifiedName(t.table);
+        ret.push(' FOR EACH ', t.forEach.toUpperCase());
+        if (t.when) { ret.push(' WHEN ('); m.expr(t.when); ret.push(')'); }
+        ret.push(' EXECUTE FUNCTION ');
+        visitQualifiedName(t.execute.function);
+        ret.push('(');
+        list(t.execute.arguments, a => m.expr(a), false);
+        ret.push(')');
+    },
+
+    dropPolicy: p => {
+        ret.push('DROP POLICY ');
+        if (p.ifExists) {
+            ret.push('IF EXISTS ');
+        }
+        ret.push(name(p.name), ' ON ');
+        visitQualifiedName(p.table);
+    },
+
+    dropTrigger: t => {
+        ret.push('DROP TRIGGER ');
+        if (t.ifExists) {
+            ret.push('IF EXISTS ');
+        }
+        ret.push(name(t.name), ' ON ');
+        visitQualifiedName(t.onTable);
+        if (t.cascade) {
+            ret.push(' ', t.cascade.toUpperCase());
+        }
+    },
+
+    grant: g => {
+        ret.push('GRANT ', g.privileges === 'all' ? 'ALL' : g.privileges.map(x => x.toUpperCase()).join(', '), ' ON ');
+        list(g.on.names, n => visitQualifiedName(n), false);
+        ret.push(' TO ');
+        list(g.to, r => ret.push(name(r)), false);
+        if (g.withGrantOption) {
+            ret.push(' WITH GRANT OPTION');
+        }
+    },
+
+    revoke: g => {
+        ret.push('REVOKE ');
+        if (g.grantOptionFor) {
+            ret.push('GRANT OPTION FOR ');
+        }
+        ret.push(g.privileges === 'all' ? 'ALL' : g.privileges.map(x => x.toUpperCase()).join(', '), ' ON ');
+        list(g.on.names, n => visitQualifiedName(n), false);
+        ret.push(' FROM ');
+        list(g.from, r => ret.push(name(r)), false);
+    },
+
     prepare: s => {
         ret.push('PREPARE ', name(s.name));
         if (s.args?.length) {
@@ -1430,6 +1616,13 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
             return;
         }
         ret.push('ALL')
+    },
+
+    execute: s => {
+        ret.push('EXECUTE ', name(s.name));
+        if (s.args?.length) {
+            list(s.args, a => m.expr(a), true);
+        }
     },
 
     arraySelect: s => {
@@ -1487,7 +1680,14 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
     },
 
     transaction: t => {
-        ret.push(t.type);
+        ret.push(t.type.toUpperCase());
+        if (t.type === 'rollback' && t.to) {
+            ret.push(' TO ', name(t.to));
+        }
+        if (t.type === 'savepoint' || t.type === 'release savepoint') {
+            ret.push(' ', name(t.name));
+        }
+        ret.push(' ');
     },
 
     unary: t => {
