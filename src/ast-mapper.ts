@@ -700,11 +700,11 @@ export class AstDefaultMapper implements IAstMapper {
                     throw NotSupported.never(col);
             }
         })
-        if (!columns?.length) {
+        if (!columns?.length && !val.partitionOf) {
             return null; // no column to create
         }
         return assignChanged(val, {
-            columns,
+            columns: columns ?? [],
         });
     }
 

@@ -298,6 +298,10 @@ kw_option -> %word {% notReservedKw('option')  %}
 kw_materialized -> %word {% notReservedKw('materialized')  %}
 kw_partial -> %word {% notReservedKw('partial')  %}
 kw_partition -> %word {% notReservedKw('partition')  %}
+kw_list -> %word {% notReservedKw('list')  %}
+kw_hash -> %word {% notReservedKw('hash')  %}
+kw_modulus -> %word {% notReservedKw('modulus')  %}
+kw_remainder -> %word {% notReservedKw('remainder')  %}
 kw_simple -> %word {% notReservedKw('simple')  %}
 kw_generated -> %word {% notReservedKw('generated')  %}
 kw_always -> %word {% notReservedKw('always')  %}

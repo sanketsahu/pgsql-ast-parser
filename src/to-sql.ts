@@ -1047,28 +1047,66 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
         }
         ret.push(t.ifNotExists ? 'TABLE IF NOT EXISTS ' : 'TABLE ');
         m.tableRef(t.name);
-        ret.push('(');
-        list(t.columns, c => {
-            switch (c.kind) {
-                case 'column':
-                    return m.createColumn(c);
-                case 'like table':
-                    return m.likeTable(c);
-                default:
-                    throw NotSupported.never(c);
+        if (t.partitionOf) {
+            ret.push(' PARTITION OF ');
+            visitQualifiedName(t.partitionOf.parent);
+            ret.push(' ');
+            const b = t.partitionOf.bound;
+            const boundVal = (v: any) => {
+                if (v === 'minvalue') { ret.push('MINVALUE'); }
+                else if (v === 'maxvalue') { ret.push('MAXVALUE'); }
+                else { m.expr(v); }
+            };
+            switch (b.type) {
+                case 'range':
+                    ret.push('FOR VALUES FROM (');
+                    b.from.forEach((v, i) => { if (i) { ret.push(', '); } boundVal(v); });
+                    ret.push(') TO (');
+                    b.to.forEach((v, i) => { if (i) { ret.push(', '); } boundVal(v); });
+                    ret.push(')');
+                    break;
+                case 'list':
+                    ret.push('FOR VALUES IN (');
+                    list(b.values, e => m.expr(e), false);
+                    ret.push(')');
+                    break;
+                case 'hash':
+                    ret.push(`FOR VALUES WITH (MODULUS ${b.modulus}, REMAINDER ${b.remainder})`);
+                    break;
+                case 'default':
+                    ret.push('DEFAULT');
+                    break;
             }
-        }, false);
-        if (t.constraints) {
-            ret.push(', ');
-            list(t.constraints, c => {
-                const cname = c.constraintName;
-                if (cname) {
-                    ret.push('CONSTRAINT ', name(cname), ' ');
+            ret.push(' ');
+        } else {
+            ret.push('(');
+            list(t.columns, c => {
+                switch (c.kind) {
+                    case 'column':
+                        return m.createColumn(c);
+                    case 'like table':
+                        return m.likeTable(c);
+                    default:
+                        throw NotSupported.never(c);
                 }
-                addConstraint(c, m);
-            }, false)
+            }, false);
+            if (t.constraints) {
+                ret.push(', ');
+                list(t.constraints, c => {
+                    const cname = c.constraintName;
+                    if (cname) {
+                        ret.push('CONSTRAINT ', name(cname), ' ');
+                    }
+                    addConstraint(c, m);
+                }, false)
+            }
+            ret.push(') ');
         }
-        ret.push(') ');
+        if (t.partitionBy) {
+            ret.push(' PARTITION BY ', t.partitionBy.strategy.toUpperCase(), ' (');
+            list(t.partitionBy.columns, e => m.expr(e), false);
+            ret.push(')');
+        }
         if (t.inherits?.length) {
             ret.push(' INHERITS ');
             list(t.inherits, i => visitQualifiedName(i), true);

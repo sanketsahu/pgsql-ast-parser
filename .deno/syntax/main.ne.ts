@@ -205,6 +205,13 @@ declare var kw_placing: any;
 declare var rparen: any;
 declare var kw_create: any;
 declare var kw_table: any;
+declare var comma: any;
+declare var kw_for: any;
+declare var kw_from: any;
+declare var kw_to: any;
+declare var kw_in: any;
+declare var kw_with: any;
+declare var kw_default: any;
 declare var kw_constraint: any;
 declare var kw_unique: any;
 declare var kw_check: any;
@@ -216,11 +223,9 @@ declare var kw_not: any;
 declare var kw_deferrable: any;
 declare var kw_initially: any;
 declare var kw_null: any;
-declare var kw_default: any;
 declare var kw_like: any;
 declare var kw_all: any;
 declare var kw_collate: any;
-declare var comma: any;
 declare var kw_create: any;
 declare var kw_unique: any;
 declare var kw_concurrently: any;
@@ -505,6 +510,16 @@ import {track, box, unbox, doubleQuoted} from '../lexer.ts';
  }
 
 
+// bare `minvalue`/`maxvalue` in a range partition bound parse as column refs;
+// convert them to the special sentinel strings.
+function partitionBoundVal(e: any) {
+    if (e && e.type === 'ref' && !e.table && (e.name === 'minvalue' || e.name === 'maxvalue')) {
+        return e.name;
+    }
+    return e;
+}
+
+
 function mergeRoleOptions(opts: any[]) {
     return Object.assign({}, ...opts);
 }
@@ -709,6 +724,10 @@ const grammar: Grammar = {
     {"name": "kw_materialized", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('materialized')},
     {"name": "kw_partial", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('partial')},
     {"name": "kw_partition", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('partition')},
+    {"name": "kw_list", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('list')},
+    {"name": "kw_hash", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('hash')},
+    {"name": "kw_modulus", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('modulus')},
+    {"name": "kw_remainder", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('remainder')},
     {"name": "kw_simple", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('simple')},
     {"name": "kw_generated", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('generated')},
     {"name": "kw_always", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('always')},
@@ -1884,11 +1903,13 @@ const grammar: Grammar = {
     {"name": "createtable_statement$ebnf$1", "symbols": [], "postprocess": () => null},
     {"name": "createtable_statement$ebnf$2", "symbols": ["kw_ifnotexists"], "postprocess": id},
     {"name": "createtable_statement$ebnf$2", "symbols": [], "postprocess": () => null},
-    {"name": "createtable_statement$ebnf$3", "symbols": ["createtable_opts"], "postprocess": id},
+    {"name": "createtable_statement$ebnf$3", "symbols": ["createtable_partitionby"], "postprocess": id},
     {"name": "createtable_statement$ebnf$3", "symbols": [], "postprocess": () => null},
-    {"name": "createtable_statement$ebnf$4", "symbols": ["createtable_tablespace"], "postprocess": id},
+    {"name": "createtable_statement$ebnf$4", "symbols": ["createtable_opts"], "postprocess": id},
     {"name": "createtable_statement$ebnf$4", "symbols": [], "postprocess": () => null},
-    {"name": "createtable_statement", "symbols": [(lexerAny.has("kw_create") ? {type: "kw_create"} : kw_create), "createtable_statement$ebnf$1", (lexerAny.has("kw_table") ? {type: "kw_table"} : kw_table), "createtable_statement$ebnf$2", "qname", "lparen", "createtable_declarationlist", "rparen", "createtable_statement$ebnf$3", "createtable_statement$ebnf$4"], "postprocess":  x => {
+    {"name": "createtable_statement$ebnf$5", "symbols": ["createtable_tablespace"], "postprocess": id},
+    {"name": "createtable_statement$ebnf$5", "symbols": [], "postprocess": () => null},
+    {"name": "createtable_statement", "symbols": [(lexerAny.has("kw_create") ? {type: "kw_create"} : kw_create), "createtable_statement$ebnf$1", (lexerAny.has("kw_table") ? {type: "kw_table"} : kw_table), "createtable_statement$ebnf$2", "qname", "lparen", "createtable_declarationlist", "rparen", "createtable_statement$ebnf$3", "createtable_statement$ebnf$4", "createtable_statement$ebnf$5"], "postprocess":  x => {
         
             const cols = x[6].filter((v: any) => 'kind' in v);
             const constraints = x[6].filter((v: any) => !('kind' in v));
@@ -1900,10 +1921,41 @@ const grammar: Grammar = {
                 columns: cols,
                 ...unwrap(x[1]),
                 ...constraints.length ? { constraints } : {},
-                ...x[8],
-                ...x[9] ? { tablespace: x[9] } : {},
+                ...x[8] ? { partitionBy: x[8] } : {},
+                ...x[9],
+                ...x[10] ? { tablespace: x[10] } : {},
             });
         } },
+    {"name": "createtable_statement$ebnf$6", "symbols": ["createtable_modifiers"], "postprocess": id},
+    {"name": "createtable_statement$ebnf$6", "symbols": [], "postprocess": () => null},
+    {"name": "createtable_statement$ebnf$7", "symbols": ["kw_ifnotexists"], "postprocess": id},
+    {"name": "createtable_statement$ebnf$7", "symbols": [], "postprocess": () => null},
+    {"name": "createtable_statement$ebnf$8", "symbols": ["createtable_partitionby"], "postprocess": id},
+    {"name": "createtable_statement$ebnf$8", "symbols": [], "postprocess": () => null},
+    {"name": "createtable_statement", "symbols": [(lexerAny.has("kw_create") ? {type: "kw_create"} : kw_create), "createtable_statement$ebnf$6", (lexerAny.has("kw_table") ? {type: "kw_table"} : kw_table), "createtable_statement$ebnf$7", "qname", "kw_partition", "kw_of", "qname", "createtable_partition_bound", "createtable_statement$ebnf$8"], "postprocess":  x => track(x, {
+            type: 'create table',
+            ... !!x[3] ? { ifNotExists: true } : {},
+            name: x[4],
+            columns: [],
+            ...unwrap(x[1]),
+            partitionOf: track(x, { parent: x[7], bound: x[8] }),
+            ...x[9] ? { partitionBy: x[9] } : {},
+        }) },
+    {"name": "createtable_partitionby$macrocall$2", "symbols": ["expr"]},
+    {"name": "createtable_partitionby$macrocall$1$ebnf$1", "symbols": []},
+    {"name": "createtable_partitionby$macrocall$1$ebnf$1$subexpression$1", "symbols": [(lexerAny.has("comma") ? {type: "comma"} : comma), "createtable_partitionby$macrocall$2"], "postprocess": last},
+    {"name": "createtable_partitionby$macrocall$1$ebnf$1", "symbols": ["createtable_partitionby$macrocall$1$ebnf$1", "createtable_partitionby$macrocall$1$ebnf$1$subexpression$1"], "postprocess": (d) => d[0].concat([d[1]])},
+    {"name": "createtable_partitionby$macrocall$1", "symbols": ["createtable_partitionby$macrocall$2", "createtable_partitionby$macrocall$1$ebnf$1"], "postprocess":  ([head, tail]) => {
+            return [unwrap(head), ...(tail.map(unwrap) || [])];
+        } },
+    {"name": "createtable_partitionby", "symbols": ["kw_partition", "kw_by", "createtable_partition_strategy", "lparen", "createtable_partitionby$macrocall$1", "rparen"], "postprocess": x => track(x, { strategy: x[2], columns: x[4] })},
+    {"name": "createtable_partition_strategy", "symbols": ["kw_range"], "postprocess": () => 'range'},
+    {"name": "createtable_partition_strategy", "symbols": ["kw_list"], "postprocess": () => 'list'},
+    {"name": "createtable_partition_strategy", "symbols": ["kw_hash"], "postprocess": () => 'hash'},
+    {"name": "createtable_partition_bound", "symbols": [(lexerAny.has("kw_for") ? {type: "kw_for"} : kw_for), "kw_values", (lexerAny.has("kw_from") ? {type: "kw_from"} : kw_from), "lparen", "expr_list_raw", "rparen", (lexerAny.has("kw_to") ? {type: "kw_to"} : kw_to), "lparen", "expr_list_raw", "rparen"], "postprocess": x => track(x, { type: 'range', from: x[4].map(partitionBoundVal), to: x[8].map(partitionBoundVal) })},
+    {"name": "createtable_partition_bound", "symbols": [(lexerAny.has("kw_for") ? {type: "kw_for"} : kw_for), "kw_values", (lexerAny.has("kw_in") ? {type: "kw_in"} : kw_in), "lparen", "expr_list_raw", "rparen"], "postprocess": x => track(x, { type: 'list', values: x[4] })},
+    {"name": "createtable_partition_bound", "symbols": [(lexerAny.has("kw_for") ? {type: "kw_for"} : kw_for), "kw_values", (lexerAny.has("kw_with") ? {type: "kw_with"} : kw_with), "lparen", "kw_modulus", "int", "comma", "kw_remainder", "int", "rparen"], "postprocess": x => track(x, { type: 'hash', modulus: unbox(x[5]), remainder: unbox(x[8]) })},
+    {"name": "createtable_partition_bound", "symbols": [(lexerAny.has("kw_default") ? {type: "kw_default"} : kw_default)], "postprocess": x => track(x, { type: 'default' })},
     {"name": "createtable_tablespace", "symbols": ["kw_tablespace", "ident"], "postprocess": x => asName(last(x))},
     {"name": "createtable_modifiers", "symbols": ["kw_unlogged"], "postprocess": x => x[0] ? { unlogged: true } : {}},
     {"name": "createtable_modifiers", "symbols": ["m_locglob"]},

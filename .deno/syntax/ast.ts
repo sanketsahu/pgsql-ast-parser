@@ -616,6 +616,44 @@ export interface CreateTableStatement extends PGNode {
     constraints?: TableConstraint[];
     inherits?: QName[];
     tablespace?: Name;
+    /** `PARTITION BY {RANGE|LIST|HASH} (cols)` — makes this a partitioned parent */
+    partitionBy?: PartitionBy;
+    /** `PARTITION OF parent FOR VALUES …` — makes this a partition of `parent` */
+    partitionOf?: PartitionOf;
+}
+
+export interface PartitionBy extends PGNode {
+    strategy: 'range' | 'list' | 'hash';
+    columns: Expr[];
+}
+
+export interface PartitionOf extends PGNode {
+    parent: QName;
+    bound: PartitionBound;
+}
+
+export type PartitionBound
+    = PartitionBoundRange
+    | PartitionBoundList
+    | PartitionBoundHash
+    | PartitionBoundDefault;
+
+export interface PartitionBoundRange extends PGNode {
+    type: 'range';
+    from: (Expr | 'minvalue' | 'maxvalue')[];
+    to: (Expr | 'minvalue' | 'maxvalue')[];
+}
+export interface PartitionBoundList extends PGNode {
+    type: 'list';
+    values: Expr[];
+}
+export interface PartitionBoundHash extends PGNode {
+    type: 'hash';
+    modulus: number;
+    remainder: number;
+}
+export interface PartitionBoundDefault extends PGNode {
+    type: 'default';
 }
 
 export interface CreateColumnsLikeTable extends PGNode {
