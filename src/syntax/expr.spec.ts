@@ -1488,6 +1488,20 @@ line`,
                 columns: [{ expr: { type: 'integer', value: 1 } }],
             },
         })
+
+        checkTreeExpr(['a is distinct from b'], {
+            type: 'binary',
+            op: 'IS DISTINCT FROM',
+            left: { type: 'ref', name: 'a' },
+            right: { type: 'ref', name: 'b' },
+        });
+
+        checkTreeExpr(['a is not distinct from b'], {
+            type: 'binary',
+            op: 'IS NOT DISTINCT FROM',
+            left: { type: 'ref', name: 'a' },
+            right: { type: 'ref', name: 'b' },
+        });
     });
 
 

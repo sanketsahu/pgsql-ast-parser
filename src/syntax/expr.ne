@@ -84,6 +84,12 @@ expr_is
                 .toUpperCase(),
             operand: unwrap(x[0]),
         }) %}
+    | (expr_is | expr_paren) %kw_is %kw_not:? %kw_distinct %kw_from (expr_compare | expr_paren) {% x => track(x, {
+            type: 'binary',
+            op: x[2] ? 'IS NOT DISTINCT FROM' : 'IS DISTINCT FROM',
+            left: unwrap(x[0]),
+            right: unwrap(x[5]),
+        }) %}
     | expr_compare {% unwrap %}
 
 
