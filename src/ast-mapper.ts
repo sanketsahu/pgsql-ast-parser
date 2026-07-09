@@ -17,6 +17,7 @@ export interface IAstPartialMapper {
     createEnum?(val: a.CreateEnumType): a.Statement | nil
     alterEnum?(val: a.AlterEnumType): a.Statement | nil
     createCompositeType?(val: a.CreateCompositeType): a.Statement | nil
+    createDomain?(val: a.CreateDomainStatement): a.Statement | nil
     drop?: (val: a.DropStatement) => a.Statement | nil
     dropTrigger?: (val: a.DropTriggerStatement) => a.Statement | nil
     show?: (val: a.ShowStatement) => a.Statement | nil
@@ -303,6 +304,8 @@ export class AstDefaultMapper implements IAstMapper {
                 return this.alterEnum(val);
             case 'create composite type':
                 return this.createCompositeType(val);
+            case 'create domain':
+                return this.createDomain(val);
             case 'union':
             case 'union all':
                 return this.union(val);
@@ -481,6 +484,14 @@ export class AstDefaultMapper implements IAstMapper {
             dataType: this.dataType(a.dataType),
         }));
         return assignChanged(val, { attributes });
+    }
+
+    createDomain(val: a.CreateDomainStatement): a.Statement | nil {
+        const dataType = this.dataType(val.dataType);
+        const def = val.default && this.expr(val.default);
+        const constraints = arrayNilMap(val.constraints, c =>
+            c.type === 'check' ? assignChanged(c, { expr: this.expr(c.expr) }) : c);
+        return assignChanged(val, { dataType, default: def, constraints });
     }
 
 

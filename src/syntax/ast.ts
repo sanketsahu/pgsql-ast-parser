@@ -46,6 +46,7 @@ export type Statement = SelectStatement
     | RevokeStatement
     | CreateEnumType
     | CreateCompositeType
+    | CreateDomainStatement
     | AlterEnumType
     | TruncateTableStatement
     | DropStatement
@@ -188,6 +189,34 @@ export interface CreateCompositeType extends PGNode {
     type: 'create composite type';
     name: QName;
     attributes: CompositeTypeAttribute[];
+}
+
+export interface CreateDomainStatement extends PGNode {
+    type: 'create domain';
+    name: QName;
+    dataType: DataTypeDef;
+    collate?: Name;
+    constraints?: DomainConstraint[];
+    default?: Expr;
+}
+
+export type DomainConstraint
+    = DomainConstraintNotNull
+    | DomainConstraintNull
+    | DomainConstraintCheck;
+
+export interface DomainConstraintNotNull extends PGNode {
+    type: 'not null';
+    constraintName?: Name;
+}
+export interface DomainConstraintNull extends PGNode {
+    type: 'null';
+    constraintName?: Name;
+}
+export interface DomainConstraintCheck extends PGNode {
+    type: 'check';
+    constraintName?: Name;
+    expr: Expr;
 }
 
 export interface AlterEnumType extends PGNode {

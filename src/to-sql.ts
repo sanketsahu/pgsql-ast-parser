@@ -358,6 +358,38 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
         ret.push(' ');
     },
 
+    createDomain: c => {
+        ret.push('CREATE DOMAIN ');
+        visitQualifiedName(c.name);
+        ret.push(' AS ');
+        m.dataType(c.dataType);
+        if (c.collate) {
+            ret.push(' COLLATE ', name(c.collate));
+        }
+        if (c.default) {
+            ret.push(' DEFAULT ');
+            m.expr(c.default);
+        }
+        for (const cst of c.constraints ?? []) {
+            if (cst.constraintName) {
+                ret.push(' CONSTRAINT ', name(cst.constraintName));
+            }
+            switch (cst.type) {
+                case 'not null':
+                    ret.push(' NOT NULL');
+                    break;
+                case 'null':
+                    ret.push(' NULL');
+                    break;
+                case 'check':
+                    ret.push(' CHECK (');
+                    m.expr(cst.expr);
+                    ret.push(')');
+                    break;
+            }
+        }
+    },
+
     setTableOwner: o => {
         ret.push(' OWNER TO ', name(o.to));
     },
