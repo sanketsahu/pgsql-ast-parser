@@ -1313,6 +1313,13 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
     },
 
     member: e => {
+        if (e.op === '.') {
+            // composite field access: (operand).field
+            ret.push('(');
+            m.expr(e.operand);
+            ret.push(').', ident(e.member as string));
+            return;
+        }
         m.expr(e.operand);
         ret.push(e.op);
         ret.push(typeof e.member === 'number'

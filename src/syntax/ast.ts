@@ -974,7 +974,7 @@ export interface ExprParameter extends PGNode {
 export interface ExprMember extends PGNode {
     type: 'member';
     operand: Expr;
-    op: '->' | '->>';
+    op: '->' | '->>' | '.';   // '.' is composite-type field access: (expr).field
     member: string | number;
 }
 
