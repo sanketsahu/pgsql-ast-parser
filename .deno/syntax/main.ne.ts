@@ -298,6 +298,16 @@ declare var kw_where: any;
 declare var kw_from: any;
 declare var kw_returning: any;
 declare var op_eq: any;
+declare var kw_into: any;
+declare var kw_using: any;
+declare var kw_on: any;
+declare var kw_when: any;
+declare var kw_and: any;
+declare var kw_then: any;
+declare var kw_not: any;
+declare var kw_do: any;
+declare var kw_user: any;
+declare var kw_default: any;
 declare var kw_table: any;
 declare var kw_only: any;
 declare var kw_to: any;
@@ -570,6 +580,8 @@ const grammar: Grammar = {
     {"name": "kw_between", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('between')},
     {"name": "kw_conflict", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('conflict')},
     {"name": "kw_nothing", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('nothing')},
+    {"name": "kw_merge", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('merge')},
+    {"name": "kw_matched", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('matched')},
     {"name": "kw_begin", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('begin')},
     {"name": "kw_if", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('if')},
     {"name": "kw_exists", "symbols": [(lexerAny.has("word") ? {type: "word"} : word)], "postprocess": notReservedKw('exists')},
@@ -2652,6 +2664,54 @@ const grammar: Grammar = {
                 value: unwrap(exprs[i]),
             })))
         } },
+    {"name": "merge_statement$ebnf$1", "symbols": ["merge_when"]},
+    {"name": "merge_statement$ebnf$1", "symbols": ["merge_statement$ebnf$1", "merge_when"], "postprocess": (d) => d[0].concat([d[1]])},
+    {"name": "merge_statement", "symbols": ["kw_merge", (lexerAny.has("kw_into") ? {type: "kw_into"} : kw_into), "table_ref_aliased", (lexerAny.has("kw_using") ? {type: "kw_using"} : kw_using), "select_from_subject", (lexerAny.has("kw_on") ? {type: "kw_on"} : kw_on), "expr", "merge_statement$ebnf$1"], "postprocess":  x => track(x, {
+            type: 'merge',
+            target: unwrap(x[2]),
+            source: unwrap(x[4]),
+            on: unwrap(x[6]),
+            actions: x[7],
+        }) },
+    {"name": "merge_when$ebnf$1$subexpression$1", "symbols": [(lexerAny.has("kw_and") ? {type: "kw_and"} : kw_and), "expr"], "postprocess": last},
+    {"name": "merge_when$ebnf$1", "symbols": ["merge_when$ebnf$1$subexpression$1"], "postprocess": id},
+    {"name": "merge_when$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "merge_when", "symbols": [(lexerAny.has("kw_when") ? {type: "kw_when"} : kw_when), "kw_matched", "merge_when$ebnf$1", (lexerAny.has("kw_then") ? {type: "kw_then"} : kw_then), "merge_matched_action"], "postprocess":  x => track(x, {
+            when: 'matched',
+            ...x[2] ? { and: unwrap(x[2]) } : {},
+            then: unwrap(x[4]),
+        }) },
+    {"name": "merge_when$ebnf$2$subexpression$1", "symbols": [(lexerAny.has("kw_and") ? {type: "kw_and"} : kw_and), "expr"], "postprocess": last},
+    {"name": "merge_when$ebnf$2", "symbols": ["merge_when$ebnf$2$subexpression$1"], "postprocess": id},
+    {"name": "merge_when$ebnf$2", "symbols": [], "postprocess": () => null},
+    {"name": "merge_when", "symbols": [(lexerAny.has("kw_when") ? {type: "kw_when"} : kw_when), (lexerAny.has("kw_not") ? {type: "kw_not"} : kw_not), "kw_matched", "merge_when$ebnf$2", (lexerAny.has("kw_then") ? {type: "kw_then"} : kw_then), "merge_notmatched_action"], "postprocess":  x => track(x, {
+            when: 'not matched',
+            ...x[3] ? { and: unwrap(x[3]) } : {},
+            then: unwrap(x[5]),
+        }) },
+    {"name": "merge_matched_action", "symbols": ["kw_update", "kw_set", "update_set_list"], "postprocess": x => track(x, { type: 'update', sets: x[2] })},
+    {"name": "merge_matched_action", "symbols": ["kw_delete"], "postprocess": x => track(x, { type: 'delete' })},
+    {"name": "merge_matched_action", "symbols": [(lexerAny.has("kw_do") ? {type: "kw_do"} : kw_do), "kw_nothing"], "postprocess": x => track(x, { type: 'do nothing' })},
+    {"name": "merge_notmatched_action$ebnf$1", "symbols": ["collist_paren"], "postprocess": id},
+    {"name": "merge_notmatched_action$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "merge_notmatched_action$ebnf$2$subexpression$1$subexpression$1", "symbols": ["kw_system"]},
+    {"name": "merge_notmatched_action$ebnf$2$subexpression$1$subexpression$1", "symbols": [(lexerAny.has("kw_user") ? {type: "kw_user"} : kw_user)]},
+    {"name": "merge_notmatched_action$ebnf$2$subexpression$1", "symbols": ["kw_overriding", "merge_notmatched_action$ebnf$2$subexpression$1$subexpression$1", "kw_value"], "postprocess": get(1)},
+    {"name": "merge_notmatched_action$ebnf$2", "symbols": ["merge_notmatched_action$ebnf$2$subexpression$1"], "postprocess": id},
+    {"name": "merge_notmatched_action$ebnf$2", "symbols": [], "postprocess": () => null},
+    {"name": "merge_notmatched_action", "symbols": ["kw_insert", "merge_notmatched_action$ebnf$1", "merge_notmatched_action$ebnf$2", "merge_insert_values"], "postprocess":  x => {
+            const columns = x[1] && x[1].map(asName);
+            const overriding = toStr(x[2]);
+            return track(x, {
+                type: 'insert',
+                ...columns ? { columns } : {},
+                ...overriding ? { overriding } : {},
+                ...x[3],
+            });
+        } },
+    {"name": "merge_notmatched_action", "symbols": [(lexerAny.has("kw_do") ? {type: "kw_do"} : kw_do), "kw_nothing"], "postprocess": x => track(x, { type: 'do nothing' })},
+    {"name": "merge_insert_values", "symbols": ["kw_values", "lparen", "insert_expr_list_raw", "rparen"], "postprocess": x => ({ values: x[2] })},
+    {"name": "merge_insert_values", "symbols": [(lexerAny.has("kw_default") ? {type: "kw_default"} : kw_default), "kw_values"], "postprocess": x => ({})},
     {"name": "altertable_statement$ebnf$1", "symbols": ["kw_ifexists"], "postprocess": id},
     {"name": "altertable_statement$ebnf$1", "symbols": [], "postprocess": () => null},
     {"name": "altertable_statement$ebnf$2", "symbols": [(lexerAny.has("kw_only") ? {type: "kw_only"} : kw_only)], "postprocess": id},
@@ -3413,6 +3473,7 @@ const grammar: Grammar = {
     {"name": "statement_noprep", "symbols": ["simplestatements_all"]},
     {"name": "statement_noprep", "symbols": ["insert_statement"]},
     {"name": "statement_noprep", "symbols": ["update_statement"]},
+    {"name": "statement_noprep", "symbols": ["merge_statement"]},
     {"name": "statement_noprep", "symbols": ["altertable_statement"]},
     {"name": "statement_noprep", "symbols": ["alterindex_statement"]},
     {"name": "statement_noprep", "symbols": ["delete_statement"]},

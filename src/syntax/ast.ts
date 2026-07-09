@@ -17,6 +17,7 @@ export type Statement = SelectStatement
     | CommitStatement
     | InsertStatement
     | UpdateStatement
+    | MergeStatement
     | ShowStatement
     | PrepareStatement
     | DeallocateStatement
@@ -331,6 +332,42 @@ export interface InsertStatement extends PGNode {
     overriding?: 'system' | 'user';
     insert: SelectStatement;
     onConflict?: OnConflictAction | nil;
+}
+
+export interface MergeStatement extends PGNode {
+    type: 'merge';
+    target: QNameAliased;
+    source: From;
+    on: Expr;
+    actions: MergeAction[];
+}
+
+export interface MergeAction extends PGNode {
+    when: 'matched' | 'not matched';
+    /** additional predicate after AND (e.g. WHEN MATCHED AND x > 0 THEN ...) */
+    and?: Expr | nil;
+    then: MergeActionUpdate | MergeActionDelete | MergeActionInsert | MergeActionDoNothing;
+}
+
+export interface MergeActionUpdate extends PGNode {
+    type: 'update';
+    sets: SetStatement[];
+}
+
+export interface MergeActionDelete extends PGNode {
+    type: 'delete';
+}
+
+export interface MergeActionInsert extends PGNode {
+    type: 'insert';
+    columns?: Name[] | nil;
+    /** VALUES (...) expressions; absent means DEFAULT VALUES */
+    values?: Expr[] | nil;
+    overriding?: 'system' | 'user';
+}
+
+export interface MergeActionDoNothing extends PGNode {
+    type: 'do nothing';
 }
 
 export interface OnConflictAction extends PGNode {

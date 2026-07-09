@@ -169,6 +169,8 @@ collist -> ident (comma ident {% last %}):* {% ([head, tail]) => {
 kw_between -> %word {% notReservedKw('between')  %}
 kw_conflict -> %word {% notReservedKw('conflict')  %}
 kw_nothing -> %word {% notReservedKw('nothing')  %}
+kw_merge -> %word {% notReservedKw('merge')  %}
+kw_matched -> %word {% notReservedKw('matched')  %}
 kw_begin -> %word {% notReservedKw('begin')  %}
 kw_if -> %word {% notReservedKw('if')  %}
 kw_exists -> %word {% notReservedKw('exists')  %}

@@ -17,6 +17,7 @@ import {lexerAny} from '../lexer';
 @include "simple-statements.ne"
 @include "insert.ne"
 @include "update.ne"
+@include "merge.ne"
 @include "alter-table.ne"
 @include "alter-index.ne"
 @include "delete.ne"
@@ -64,6 +65,7 @@ statement_noprep
     | simplestatements_all
     | insert_statement
     | update_statement
+    | merge_statement
     | altertable_statement
     | alterindex_statement
     | delete_statement

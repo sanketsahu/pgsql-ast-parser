@@ -6,6 +6,7 @@ import { nil, NotSupported, trimNullish } from './utils.ts';
 export interface IAstPartialMapper {
     statement?: (val: a.Statement) => a.Statement | nil;
     update?: (val: a.UpdateStatement) => a.Statement | nil
+    merge?: (val: a.MergeStatement) => a.Statement | nil
     insert?: (val: a.InsertStatement) => a.Statement | nil
     delete?: (val: a.DeleteStatement) => a.Statement | nil
     comment?: (val: a.CommentStatement) => a.Statement | nil
@@ -258,6 +259,8 @@ export class AstDefaultMapper implements IAstMapper {
                 return this.selection(val);
             case 'update':
                 return this.update(val);
+            case 'merge':
+                return this.merge(val);
             case 'create extension':
                 return this.createExtension(val);
             case 'tablespace':
@@ -564,6 +567,41 @@ export class AstDefaultMapper implements IAstMapper {
             sets,
             from,
             returning,
+        });
+    }
+
+
+    merge(val: a.MergeStatement): a.Statement | nil {
+        const target = this.tableRef(val.target);
+        if (!target) {
+            return null; // nowhere to merge into
+        }
+        const source = this.from(val.source);
+        if (!source) {
+            return null; // nothing to merge from
+        }
+        const on = val.on && this.expr(val.on);
+        const actions = arrayNilMap(val.actions, a => {
+            const and = a.and && this.expr(a.and);
+            const then = a.then;
+            let newThen = then;
+            if (then.type === 'update') {
+                const sets = arrayNilMap(then.sets, x => this.set(x));
+                if (!sets?.length) {
+                    return null; // drop an update with no sets
+                }
+                newThen = assignChanged(then, { sets });
+            } else if (then.type === 'insert' && then.values) {
+                const values = arrayNilMap(then.values, e => this.expr(e));
+                newThen = assignChanged(then, { values });
+            }
+            return assignChanged(a, { and, then: newThen });
+        });
+        return assignChanged(val, {
+            target,
+            source,
+            on,
+            actions,
         });
     }
 

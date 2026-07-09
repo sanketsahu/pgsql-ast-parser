@@ -1712,6 +1712,55 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
         }
     },
 
+    merge: mg => {
+        ret.push('MERGE INTO ');
+        m.tableRef(mg.target);
+        ret.push(' USING ');
+        m.from(mg.source);
+        ret.push(' ON ');
+        m.expr(mg.on);
+        ret.push(' ');
+        for (const a of mg.actions) {
+            ret.push('WHEN ', a.when === 'not matched' ? 'NOT MATCHED' : 'MATCHED');
+            if (a.and) {
+                ret.push(' AND ');
+                m.expr(a.and);
+            }
+            ret.push(' THEN ');
+            const then = a.then;
+            switch (then.type) {
+                case 'update':
+                    ret.push('UPDATE SET ');
+                    list(then.sets, s => m.set(s), false);
+                    break;
+                case 'delete':
+                    ret.push('DELETE');
+                    break;
+                case 'do nothing':
+                    ret.push('DO NOTHING');
+                    break;
+                case 'insert':
+                    ret.push('INSERT ');
+                    if (then.columns) {
+                        ret.push('(', then.columns.map(name).join(', '), ') ');
+                    }
+                    if (then.overriding) {
+                        ret.push('OVERRIDING ', then.overriding.toUpperCase(), ' VALUE ');
+                    }
+                    if (then.values) {
+                        ret.push('VALUES ');
+                        list(then.values, e => m.expr(e), true);
+                    } else {
+                        ret.push('DEFAULT VALUES');
+                    }
+                    break;
+                default:
+                    throw NotSupported.never(then);
+            }
+            ret.push(' ');
+        }
+    },
+
     update: u => {
         ret.push('UPDATE ');
         m.tableRef(u.table);
