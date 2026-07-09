@@ -206,6 +206,10 @@ function withAccepts(val: a.Statement | nil): val is a.WithStatementBinding {
         case 'update':
         case 'union':
         case 'union all':
+        case 'intersect':
+        case 'intersect all':
+        case 'except':
+        case 'except all':
         case 'with':
             return true;
         default:
@@ -311,6 +315,10 @@ export class AstDefaultMapper implements IAstMapper {
                 return this.createDomain(val);
             case 'union':
             case 'union all':
+            case 'intersect':
+            case 'intersect all':
+            case 'except':
+            case 'except all':
                 return this.union(val);
             case 'show':
                 return this.show(val);
@@ -1042,6 +1050,10 @@ export class AstDefaultMapper implements IAstMapper {
                 return this.selection(val);
             case 'union':
             case 'union all':
+            case 'intersect':
+            case 'intersect all':
+            case 'except':
+            case 'except all':
                 return this.union(val);
             case 'with':
                 return this.with(val);
@@ -1266,6 +1278,10 @@ export class AstDefaultMapper implements IAstMapper {
             case 'select':
             case 'union':
             case 'union all':
+            case 'intersect':
+            case 'intersect all':
+            case 'except':
+            case 'except all':
             case 'with':
             case 'with recursive':
                 return this.select(val);

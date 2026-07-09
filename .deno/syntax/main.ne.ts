@@ -348,6 +348,8 @@ declare var kw_check: any;
 declare var kw_default: any;
 declare var kw_to: any;
 declare var kw_union: any;
+declare var kw_intersect: any;
+declare var kw_except: any;
 declare var kw_all: any;
 declare var kw_as: any;
 declare var kw_all: any;
@@ -3215,9 +3217,12 @@ const grammar: Grammar = {
     {"name": "union_left", "symbols": ["selection_paren"]},
     {"name": "union_right", "symbols": ["selection"]},
     {"name": "union_right", "symbols": ["selection_paren"]},
+    {"name": "union_statement$subexpression$1$subexpression$1", "symbols": [(lexerAny.has("kw_union") ? {type: "kw_union"} : kw_union)]},
+    {"name": "union_statement$subexpression$1$subexpression$1", "symbols": [(lexerAny.has("kw_intersect") ? {type: "kw_intersect"} : kw_intersect)]},
+    {"name": "union_statement$subexpression$1$subexpression$1", "symbols": [(lexerAny.has("kw_except") ? {type: "kw_except"} : kw_except)]},
     {"name": "union_statement$subexpression$1$ebnf$1", "symbols": [(lexerAny.has("kw_all") ? {type: "kw_all"} : kw_all)], "postprocess": id},
     {"name": "union_statement$subexpression$1$ebnf$1", "symbols": [], "postprocess": () => null},
-    {"name": "union_statement$subexpression$1", "symbols": [(lexerAny.has("kw_union") ? {type: "kw_union"} : kw_union), "union_statement$subexpression$1$ebnf$1"]},
+    {"name": "union_statement$subexpression$1", "symbols": ["union_statement$subexpression$1$subexpression$1", "union_statement$subexpression$1$ebnf$1"]},
     {"name": "union_statement", "symbols": ["union_left", "union_statement$subexpression$1", "union_right"], "postprocess":  x => {
             return track(x, {
                 type: toStr(x[1], ' '),

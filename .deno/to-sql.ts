@@ -1673,7 +1673,9 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
         ret.push('(');
         m.statement(s.left);
         ret.push(') ', s.type.toUpperCase(), ' ');
-        if (s.right.type === 'union' || s.right.type === 'union all') {
+        if (s.right.type === 'union' || s.right.type === 'union all'
+            || s.right.type === 'intersect' || s.right.type === 'intersect all'
+            || s.right.type === 'except' || s.right.type === 'except all') {
             m.union(s.right);
         } else {
             ret.push('(');

@@ -819,8 +819,12 @@ export interface SelectFromStatement extends PGNode {
     skip?: SkipClause;
 }
 
+export type SetOperationType = 'union' | 'union all'
+    | 'intersect' | 'intersect all'
+    | 'except' | 'except all';
+
 export interface SelectFromUnion extends PGNode {
-    type: 'union' | 'union all',
+    type: SetOperationType,
     left: SelectStatement;
     right: SelectStatement;
 }
