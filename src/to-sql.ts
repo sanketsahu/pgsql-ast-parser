@@ -1041,6 +1041,9 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
             ret.push(' INHERITS ');
             list(t.inherits, i => visitQualifiedName(i), true);
         }
+        if (t.tablespace) {
+            ret.push(' TABLESPACE ', name(t.tablespace));
+        }
     },
 
     likeTable: l => {
@@ -1574,6 +1577,13 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
             return;
         }
         ret.push('ALL')
+    },
+
+    execute: s => {
+        ret.push('EXECUTE ', name(s.name));
+        if (s.args?.length) {
+            list(s.args, a => m.expr(a), true);
+        }
     },
 
     arraySelect: s => {

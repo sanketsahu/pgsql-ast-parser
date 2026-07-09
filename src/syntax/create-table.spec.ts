@@ -26,6 +26,17 @@ describe('Create table', () => {
         }],
     });
 
+    checkCreateTable(['create table test(value text) TABLESPACE fast'], {
+        type: 'create table',
+        name: { name: 'test' },
+        columns: [{
+            kind: 'column',
+            name: { name: 'value' },
+            dataType: { name: 'text' },
+        }],
+        tablespace: { name: 'fast' },
+    });
+
     checkCreateTable(['create table test(value pg_catalog.text)'], {
         type: 'create table',
         name: { name: 'test', },

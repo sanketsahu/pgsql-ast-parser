@@ -16,6 +16,7 @@ createtable_statement -> %kw_create
             createtable_declarationlist
         rparen
         createtable_opts:?
+        createtable_tablespace:?
      {% x => {
 
         const cols = x[6].filter((v: any) => 'kind' in v);
@@ -28,9 +29,12 @@ createtable_statement -> %kw_create
             columns: cols,
             ...unwrap(x[1]),
             ...constraints.length ? { constraints } : {},
-            ...last(x),
+            ...x[8],
+            ...x[9] ? { tablespace: x[9] } : {},
         });
     } %}
+
+createtable_tablespace -> kw_tablespace ident {% x => asName(last(x)) %}
 
 
 createtable_modifiers

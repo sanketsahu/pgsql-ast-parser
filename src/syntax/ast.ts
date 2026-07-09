@@ -20,6 +20,7 @@ export type Statement = SelectStatement
     | ShowStatement
     | PrepareStatement
     | DeallocateStatement
+    | ExecuteStatement
     | DeleteStatement
     | WithStatement
     | RollbackStatement
@@ -165,6 +166,12 @@ export interface PrepareStatement extends PGNode {
 export interface DeallocateStatement extends PGNode {
     type: 'deallocate';
     target: Name | DeallocateStatementOpt;
+}
+
+export interface ExecuteStatement extends PGNode {
+    type: 'execute';
+    name: Name;
+    args?: Expr[];
 }
 
 export interface DeallocateStatementOpt extends PGNode {
@@ -540,6 +547,7 @@ export interface CreateTableStatement extends PGNode {
     /** Constraints not defined inline */
     constraints?: TableConstraint[];
     inherits?: QName[];
+    tablespace?: Name;
 }
 
 export interface CreateColumnsLikeTable extends PGNode {

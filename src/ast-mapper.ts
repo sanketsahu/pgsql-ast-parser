@@ -27,6 +27,7 @@ export interface IAstPartialMapper {
     dataType?: (dataType: a.DataTypeDef) => a.DataTypeDef
     prepare?: (st: a.PrepareStatement) => a.Statement | nil
     deallocate?: (st: a.DeallocateStatement) => a.Statement | nil
+    execute?: (st: a.ExecuteStatement) => a.Statement | nil
     parameter?: (st: a.ExprParameter) => a.Expr | nil
     tableRef?: (st: a.QNameAliased) => a.QNameAliased | nil
     transaction?: (val: a.CommitStatement | a.RollbackStatement | a.StartTransactionStatement | a.SavepointStatement | a.ReleaseSavepointStatement) => a.Statement | nil
@@ -311,6 +312,8 @@ export class AstDefaultMapper implements IAstMapper {
                 return this.prepare(val);
             case 'deallocate':
                 return this.deallocate(val);
+            case 'execute':
+                return this.execute(val);
             case 'create view':
                 return this.createView(val);
             case 'create materialized view':
@@ -787,6 +790,12 @@ export class AstDefaultMapper implements IAstMapper {
 
     deallocate(st: a.DeallocateStatement): a.Statement | nil {
         return st;
+    }
+
+    execute(st: a.ExecuteStatement): a.Statement | nil {
+        return assignChanged(st, {
+            args: arrayNilMap(st.args, a => this.expr(a)),
+        });
     }
 
     // =========================================
