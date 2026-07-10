@@ -502,6 +502,19 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
         ret.push('] ');
     },
 
+    arraySlice: v => {
+        m.expr(v.array);
+        ret.push('[');
+        if (v.from) {
+            m.expr(v.from);
+        }
+        ret.push(':');
+        if (v.to) {
+            m.expr(v.to);
+        }
+        ret.push('] ');
+    },
+
     expr: e => {
         if (e.type === 'ref') {
             m.ref(e);

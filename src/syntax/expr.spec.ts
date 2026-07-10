@@ -1194,6 +1194,25 @@ line`,
                 right: { type: 'integer', value: 2 },
             }
         })
+
+        checkTreeExpr(['a[1:3]', '"a"[1 : 3]'], {
+            type: 'arraySlice',
+            array: { type: 'ref', name: 'a' },
+            from: { type: 'integer', value: 1 },
+            to: { type: 'integer', value: 3 },
+        })
+
+        checkTreeExpr(['a[:3]'], {
+            type: 'arraySlice',
+            array: { type: 'ref', name: 'a' },
+            to: { type: 'integer', value: 3 },
+        })
+
+        checkTreeExpr(['a[2:]'], {
+            type: 'arraySlice',
+            array: { type: 'ref', name: 'a' },
+            from: { type: 'integer', value: 2 },
+        })
     });
 
 

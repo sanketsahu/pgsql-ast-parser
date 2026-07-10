@@ -110,6 +110,12 @@ expr_array_index
             array: unwrap(x[0]),
             index: unwrap(x[2]),
         }) %}
+    | (expr_array_index | expr_paren) %lbracket expr_nostar:? %op_colon expr_nostar:? %rbracket {% x => track(x, {
+            type: 'arraySlice',
+            array: unwrap(x[0]),
+            ...x[2] ? { from: unwrap(x[2]) } : {},
+            ...x[4] ? { to: unwrap(x[4]) } : {},
+        }) %}
     | expr_member {% unwrap %}
 
 expr_member
@@ -291,6 +297,7 @@ expr_primary
     -> %float {% x => track(x, mkNumeric(x[0])) %}
     | %int {% x => track(x, mkInteger(x[0])) %}
     | string {% x => track(x, { type: 'string', value: unbox(x[0]) }) %}
+    | %codeblock {% x => track(x, { type: 'string', value: x[0].value }) %}
     | %kw_true {% x => track(x, { type: 'boolean', value: true }) %}
     | %kw_false {% x => track(x, { type: 'boolean', value: false }) %}
     | %kw_null {% x => track(x, { type: 'null' }) %}

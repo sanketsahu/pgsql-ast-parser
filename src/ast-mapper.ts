@@ -74,6 +74,7 @@ export interface IAstPartialMapper {
     ternary?: (val: a.ExprTernary) => a.Expr | nil
     arraySelect?: (val: a.ExprArrayFromSelect) => a.Expr | nil
     arrayIndex?: (val: a.ExprArrayIndex) => a.Expr | nil
+    arraySlice?: (val: a.ExprArraySlice) => a.Expr | nil
     member?: (val: a.ExprMember) => a.Expr | nil
     extract?: (st: a.ExprExtract) => a.Expr | nil
     case?: (val: a.ExprCase) => a.Expr | nil
@@ -1308,6 +1309,8 @@ export class AstDefaultMapper implements IAstMapper {
                 return this.member(val);
             case 'arrayIndex':
                 return this.arrayIndex(val);
+            case 'arraySlice':
+                return this.arraySlice(val);
             case 'ternary':
                 return this.ternary(val);
             case 'select':
@@ -1389,6 +1392,20 @@ export class AstDefaultMapper implements IAstMapper {
         return assignChanged(val, {
             array,
             index,
+        });
+    }
+
+    arraySlice(val: a.ExprArraySlice): a.Expr | nil {
+        const array = this.expr(val.array);
+        if (!array) {
+            return null;
+        }
+        const from = val.from && this.expr(val.from);
+        const to = val.to && this.expr(val.to);
+        return assignChanged(val, {
+            array,
+            from: from ?? undefined,
+            to: to ?? undefined,
         });
     }
 

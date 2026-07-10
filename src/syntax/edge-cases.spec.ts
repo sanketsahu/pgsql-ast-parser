@@ -7,6 +7,24 @@ import { parse, parseFirst } from '../parser';
 
 describe('Edge cases', () => {
 
+    describe('Dollar-quoted strings', () => {
+        it('parses a named dollar-quoted string literal (with ; and quotes inside)', () => {
+            const [st] = parse(`insert into t(a) values ($x$he;llo 'q'$x$)`) as any;
+            expect(st.type).to.equal('insert');
+            expect(st.insert.values[0][0]).to.deep.include({ type: 'string', value: `he;llo 'q'` });
+        });
+        it('parses a named dollar-quoted DO block body', () => {
+            const [st] = parse(`do $tag$ begin perform 1; end $tag$`) as any;
+            expect(st.type).to.equal('do');
+            expect(st.code).to.contain('perform 1');
+        });
+        it('still parses a $$ function body', () => {
+            const [st] = parse(`create function f() returns int language sql as $$ select 1 $$`) as any;
+            expect(st.type).to.equal('create function');
+            expect(st.code).to.contain('select 1');
+        });
+    });
+
     describe('Comment-only / empty input', () => {
         it('returns [] for empty string', () => {
             expect(parse('')).to.deep.equal([]);

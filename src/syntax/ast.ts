@@ -968,6 +968,7 @@ export type Expr = ExprRef
     | ExprMember
     | ExprValueKeyword
     | ExprArrayIndex
+    | ExprArraySlice
     | ExprNumeric
     | ExprString
     | ExprCase
@@ -1169,6 +1170,15 @@ export interface ExprArrayIndex extends PGNode {
     type: 'arrayIndex',
     array: Expr;
     index: Expr;
+}
+
+export interface ExprArraySlice extends PGNode {
+    type: 'arraySlice',
+    array: Expr;
+    /** lower bound (1-based, inclusive); omitted means "from the start" */
+    from?: Expr;
+    /** upper bound (1-based, inclusive); omitted means "to the end" */
+    to?: Expr;
 }
 
 export interface ExprNull extends PGNode {
