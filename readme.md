@@ -1,4 +1,10 @@
 
+> ## `@tinbase/pgsql-ast-parser` — fork notice
+>
+> This package is a **fork of [`pgsql-ast-parser`](https://github.com/oguimbal/pgsql-ast-parser)** by Olivier Guimbal, maintained for [tinbase](https://github.com/tinbase/tinbase) / [`@tinbase/pg-mem`](https://www.npmjs.com/package/@tinbase/pg-mem). It extends the grammar with **dollar-quoted strings (`$tag$…$tag$`), array slicing (`arr[lo:hi]`), GRANT/roles & `ALTER DEFAULT PRIVILEGES`, `NOTIFY`/`LISTEN`, `ALTER COLUMN … TYPE … USING`, `CREATE INDEX … INCLUDE`, `SECURITY DEFINER`, `MERGE`, declarative partitioning**, and more.
+>
+> The additions are proposed upstream in **[oguimbal/pgsql-ast-parser#174](https://github.com/oguimbal/pgsql-ast-parser/pull/174)**; this scoped package exists so tinbase can depend on them before that merges. Same **MIT** license. If you don't need these additions, use upstream [`pgsql-ast-parser`](https://www.npmjs.com/package/pgsql-ast-parser).
+
 <p align="center">
   <a href="https://npmjs.org/package/pgsql-ast-parser"><img src="http://img.shields.io/npm/v/pgsql-ast-parser.svg"></a>
   <a href="https://npmjs.org/package/pgsql-ast-parser"><img src="https://img.shields.io/npm/dm/pgsql-ast-parser.svg"></a>
