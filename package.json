@@ -1,9 +1,12 @@
 {
-  "name": "pgsql-ast-parser",
-  "version": "12.0.2",
-  "description": "Yet another simple Postgres SQL parser/modifier",
+  "name": "@tinbase/pgsql-ast-parser",
+  "version": "12.1.0",
+  "description": "Fork of pgsql-ast-parser with extended grammar (dollar-quoted strings, array slicing, GRANT/roles, triggers, MERGE, partitioning, ...). Tracks oguimbal/pgsql-ast-parser; pending upstream PR #174.",
   "main": "index.js",
-  "repository": "https://github.com/oguimbal/pgsql-ast-parser",
+  "repository": "https://github.com/sanketsahu/pgsql-ast-parser",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "start": "webpack --config webpack.config.js",
     "build": "rimraf lib && webpack --config webpack.config.js --prod",
