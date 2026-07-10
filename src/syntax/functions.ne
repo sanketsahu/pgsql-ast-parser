@@ -75,6 +75,7 @@ func_spec -> kw_language word {% x => track(x, { language: asName(last(x)) }) %}
          | (word {%kw('called')%}) oninp {% () => ({ onNullInput: 'call' }) %}
          | (word {%kw('returns')%}) %kw_null oninp {% () => ({ onNullInput: 'null' }) %}
          | (word {%kw('strict')%})  {% () => ({ onNullInput: 'strict' }) %}
+         | (word {%kw('external')%}):? (word {%kw('security')%}) (word {%kw('definer')%} | word {%kw('invoker')%}) {% x => track(x, { security: toStr(last(x)) }) %}
 
 func_purity -> word {%kw('immutable')%}
             |  word {%kw('stable')%}

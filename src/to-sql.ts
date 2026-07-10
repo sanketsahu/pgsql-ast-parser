@@ -1,7 +1,7 @@
 import { IAstPartialMapper, AstDefaultMapper } from './ast-mapper';
 import { astVisitor, IAstVisitor, IAstFullVisitor } from './ast-visitor';
 import { NotSupported, nil, ReplaceReturnType, NoExtraProperties } from './utils';
-import { TableConstraint, JoinClause, ColumnConstraint, AlterSequenceStatement, CreateSequenceStatement, AlterSequenceSetOptions, CreateSequenceOptions, QName, SetGlobalValue, AlterColumnAddGenerated, QColumn, Name, OrderByStatement, QNameAliased, FrameBound } from './syntax/ast';
+import { TableConstraint, JoinClause, ColumnConstraint, AlterSequenceStatement, CreateSequenceStatement, AlterSequenceSetOptions, CreateSequenceOptions, QName, SetGlobalValue, AlterColumnAddGenerated, QColumn, Name, OrderByStatement, QNameAliased, FrameBound, GrantOnTarget, GrantOnAllInSchema } from './syntax/ast';
 import { literal } from './pg-escape';
 import { sqlKeywords } from './keywords';
 
@@ -259,6 +259,17 @@ function join(m: IAstVisitor, j: JoinClause | nil, tbl: () => void) {
     ret.push(' ');
 }
 
+function emitGrantOn(on: GrantOnTarget | GrantOnAllInSchema) {
+    if (on.type === 'all in schema') {
+        ret.push('ON ALL ', on.objectType.toUpperCase(), ' IN SCHEMA ');
+        list(on.schemas, n => visitQualifiedName(n), false);
+        return;
+    }
+    const kw = on.type === 'table' ? 'ON' : 'ON ' + on.type.toUpperCase();
+    ret.push(kw, ' ');
+    list(on.names, n => visitQualifiedName(n), false);
+}
+
 function visitOp(v: { op: string; opSchema?: string; }) {
     if (v.opSchema) {
         ret.push(' operator(', ident(v.opSchema), '.', v.op, ') ');
@@ -410,6 +421,10 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
     setColumnType: t => {
         ret.push(' SET DATA TYPE ');
         m.dataType(t.dataType);
+        if (t.using) {
+            ret.push(' USING ');
+            m.expr(t.using);
+        }
         ret.push(' ');
     },
 
@@ -671,6 +686,10 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
             case 'column':
                 visitQColumn(c.on.column);
                 break;
+            case 'policy':
+                ret.push(name(c.on.policy), ' ON ');
+                visitQualifiedName(c.on.name);
+                break;
             default:
                 visitQualifiedName(c.on.name);
                 break;
@@ -850,6 +869,9 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
             default:
                 throw NotSupported.never(c.onNullInput);
         }
+        if (c.security) {
+            ret.push('SECURITY ', c.security.toUpperCase(), ' ');
+        }
     },
 
 
@@ -1018,6 +1040,10 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
                 ret.push('nulls ', e.nulls, ' ');
             }
         }, true);
+        if (c.include?.length) {
+            ret.push(' INCLUDE ');
+            list(c.include, n => ret.push(name(n)), true);
+        }
         if (c.with) {
             ret.push('WITH ');
             list(c.with, w => {
@@ -1539,6 +1565,21 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
         ret.push('SHOW ', name(s.variable));
     },
 
+    notify: s => {
+        ret.push('NOTIFY ', name(s.channel));
+        if (s.payload !== undefined) {
+            ret.push(', ', literal(s.payload));
+        }
+    },
+
+    listen: s => {
+        ret.push('LISTEN ', name(s.channel));
+    },
+
+    unlisten: s => {
+        ret.push('UNLISTEN ', s.channel === '*' ? '*' : name(s.channel));
+    },
+
     createRole: r => {
         ret.push('CREATE ROLE ', name(r.name));
         const o = r.options;
@@ -1618,8 +1659,8 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
     },
 
     grant: g => {
-        ret.push('GRANT ', g.privileges === 'all' ? 'ALL' : g.privileges.map(x => x.toUpperCase()).join(', '), ' ON ');
-        list(g.on.names, n => visitQualifiedName(n), false);
+        ret.push('GRANT ', g.privileges === 'all' ? 'ALL' : g.privileges.map(x => x.toUpperCase()).join(', '), ' ');
+        emitGrantOn(g.on);
         ret.push(' TO ');
         list(g.to, r => ret.push(name(r)), false);
         if (g.withGrantOption) {
@@ -1632,10 +1673,20 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
         if (g.grantOptionFor) {
             ret.push('GRANT OPTION FOR ');
         }
-        ret.push(g.privileges === 'all' ? 'ALL' : g.privileges.map(x => x.toUpperCase()).join(', '), ' ON ');
-        list(g.on.names, n => visitQualifiedName(n), false);
+        ret.push(g.privileges === 'all' ? 'ALL' : g.privileges.map(x => x.toUpperCase()).join(', '), ' ');
+        emitGrantOn(g.on);
         ret.push(' FROM ');
         list(g.from, r => ret.push(name(r)), false);
+    },
+
+    alterRole: r => {
+        ret.push('ALTER ROLE ', r.role === 'all' ? 'ALL' : name(r.role));
+    },
+
+    alterDefaultPrivileges: () => {
+        // no-op passthrough: the action details aren't retained on the AST, so emit a
+        // valid canonical statement (a real Postgres would keep the original clause)
+        ret.push('ALTER DEFAULT PRIVILEGES GRANT ALL ON TABLES TO PUBLIC');
     },
 
     prepare: s => {

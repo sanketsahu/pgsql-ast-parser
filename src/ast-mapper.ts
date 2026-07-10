@@ -22,6 +22,9 @@ export interface IAstPartialMapper {
     drop?: (val: a.DropStatement) => a.Statement | nil
     dropTrigger?: (val: a.DropTriggerStatement) => a.Statement | nil
     show?: (val: a.ShowStatement) => a.Statement | nil
+    notify?: (val: a.NotifyStatement) => a.Statement | nil
+    listen?: (val: a.ListenStatement) => a.Statement | nil
+    unlisten?: (val: a.UnlistenStatement) => a.Statement | nil
     createTable?: (val: a.CreateTableStatement) => a.Statement | nil
     truncateTable?: (val: a.TruncateTableStatement) => a.Statement | nil
     createExtension?: (val: a.CreateExtensionStatement) => a.Statement | nil
@@ -90,6 +93,8 @@ export interface IAstPartialMapper {
     valueKeyword?(val: a.ExprValueKeyword): a.Expr | nil
     tablespace?(val: a.TablespaceStatement): a.Statement | nil
     createRole?(val: a.CreateRoleStatement): a.Statement | nil
+    alterRole?(val: a.AlterRoleStatement): a.Statement | nil
+    alterDefaultPrivileges?(val: a.AlterDefaultPrivilegesStatement): a.Statement | nil
     setRole?(val: a.SetRoleStatement): a.Statement | nil
     reset?(val: a.ResetStatement): a.Statement | nil
     createPolicy?(val: a.CreatePolicyStatement): a.Statement | nil
@@ -277,6 +282,10 @@ export class AstDefaultMapper implements IAstMapper {
                 return this.setNames(val);
             case 'create role':
                 return this.createRole(val);
+            case 'alter role':
+                return this.alterRole(val);
+            case 'alter default privileges':
+                return this.alterDefaultPrivileges(val);
             case 'set role':
                 return this.setRole(val);
             case 'reset':
@@ -322,6 +331,12 @@ export class AstDefaultMapper implements IAstMapper {
                 return this.union(val);
             case 'show':
                 return this.show(val);
+            case 'notify':
+                return this.notify(val);
+            case 'listen':
+                return this.listen(val);
+            case 'unlisten':
+                return this.unlisten(val);
             case 'prepare':
                 return this.prepare(val);
             case 'deallocate':
@@ -446,7 +461,27 @@ export class AstDefaultMapper implements IAstMapper {
         return val;
     }
 
+    notify(val: a.NotifyStatement): a.Statement | nil {
+        return val;
+    }
+
+    listen(val: a.ListenStatement): a.Statement | nil {
+        return val;
+    }
+
+    unlisten(val: a.UnlistenStatement): a.Statement | nil {
+        return val;
+    }
+
     createRole(val: a.CreateRoleStatement): a.Statement | nil {
+        return val;
+    }
+
+    alterRole(val: a.AlterRoleStatement): a.Statement | nil {
+        return val;
+    }
+
+    alterDefaultPrivileges(val: a.AlterDefaultPrivilegesStatement): a.Statement | nil {
         return val;
     }
 

@@ -36,6 +36,26 @@ describe('Create function', () => {
         setof: true,
     });
 
+    checkStatement(`CREATE FUNCTION f() RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS 'x'`, {
+        type: 'create function',
+        name: { name: 'f' },
+        arguments: [],
+        code: 'x',
+        language: { name: 'plpgsql' },
+        returns: { name: 'void' },
+        security: 'definer',
+    });
+
+    checkStatement(`CREATE FUNCTION f() RETURNS void SECURITY INVOKER LANGUAGE sql AS 'x'`, {
+        type: 'create function',
+        name: { name: 'f' },
+        arguments: [],
+        code: 'x',
+        language: { name: 'sql' },
+        returns: { name: 'void' },
+        security: 'invoker',
+    });
+
     // modifiers BEFORE code block
     checkStatement(`CREATE FUNCTION add(integer, integer) RETURNS integer stable
     LANGUAGE SQL RETURNS NULL ON NULL INPUT

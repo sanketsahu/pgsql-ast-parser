@@ -39,4 +39,30 @@ describe('Grant / revoke', () => {
         on: { type: 'table', names: [{ name: 'docs' }] },
         from: [{ name: 'alice' }],
     });
+
+    checkStatement([`grant usage on schema extensions to anon, authenticated`], {
+        type: 'grant',
+        privileges: ['usage'],
+        on: { type: 'schema', names: [{ name: 'extensions' }] },
+        to: [{ name: 'anon' }, { name: 'authenticated' }],
+    });
+
+    checkStatement([`grant all on all tables in schema public to anon`], {
+        type: 'grant',
+        privileges: 'all',
+        on: { type: 'all in schema', objectType: 'tables', schemas: [{ name: 'public' }] },
+        to: [{ name: 'anon' }],
+    });
+
+    checkStatement([`grant execute on function auth.uid() to anon`], {
+        type: 'grant',
+        privileges: ['execute'],
+        on: { type: 'function', names: [{ schema: 'auth', name: 'uid' }] },
+        to: [{ name: 'anon' }],
+    });
+
+    checkStatement([`alter role anon set search_path to "$user", public, extensions`], {
+        type: 'alter role',
+        role: { name: 'anon' },
+    });
 });

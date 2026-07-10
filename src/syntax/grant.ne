@@ -31,11 +31,32 @@ grant_privileges
 
 grant_priv -> (%kw_select | %kw_references | kw_insert | kw_update | kw_delete | kw_truncate | kw_trigger | kw_usage | kw_execute | kw_connect | kw_temporary | kw_temp) {% x => toStr(unwrap(x)).toLowerCase() %}
 
-# only the "[TABLE] name[, ...]" object form is modelled; other object types are ignored
-grant_on_target -> %kw_on (%kw_table | kw_sequence):? grant_name_list {% x => track(x, {
-    type: 'table',
-    names: x[2],
-}) %}
+# object forms: TABLE / SEQUENCE / SCHEMA / DATABASE / FUNCTION lists, plus
+# "ALL {TABLES|SEQUENCES|FUNCTIONS|ROUTINES} IN SCHEMA ...". All are no-ops in pg-mem.
+grant_on_target
+    -> %kw_on (%kw_table | kw_sequence):? grant_name_list {% x => track(x, {
+        type: toStr(unwrap(x[1] ?? [])) === 'sequence' ? 'sequence' : 'table',
+        names: x[2],
+    }) %}
+    | %kw_on kw_schema grant_name_list {% x => track(x, { type: 'schema', names: x[2] }) %}
+    | %kw_on kw_database grant_name_list {% x => track(x, { type: 'database', names: x[2] }) %}
+    | %kw_on (kw_function | kw_procedure | kw_routine) grant_func_list {% x => track(x, { type: 'function', names: x[2] }) %}
+    | %kw_on %kw_all grant_all_object_type %kw_in kw_schema grant_name_list {% x => track(x, {
+        type: 'all in schema',
+        objectType: x[2],
+        schemas: x[5],
+    }) %}
+
+grant_all_object_type
+    -> kw_tables {% () => 'tables' %}
+    | kw_sequences {% () => 'sequences' %}
+    | kw_functions {% () => 'functions' %}
+    | kw_routines {% () => 'routines' %}
+
+# function target: name with an optional (ignored) argument-type signature
+grant_func_list -> grant_func (comma grant_func {% last %}):* {% ([head, tail]) => [head, ...(tail || [])] %}
+grant_func -> qualified_name (lparen grant_func_args:? rparen):? {% x => x[0] %}
+grant_func_args -> data_type (comma data_type {% last %}):*
 
 grant_name_list -> qualified_name (comma qualified_name {% last %}):* {% ([head, tail]) => [head, ...(tail || [])] %}
 

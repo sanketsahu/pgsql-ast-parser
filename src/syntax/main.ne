@@ -56,6 +56,8 @@ statement_noprep
     | createtable_statement
     | createextension_statement
     | createrole_statement
+    | alterrole_statement
+    | alterdefaultprivileges_statement
     | createpolicy_statement
     | droppolicy_statement
     | grant_statement

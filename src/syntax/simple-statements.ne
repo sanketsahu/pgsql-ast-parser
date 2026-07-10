@@ -16,12 +16,27 @@ simplestatements_all
     | simplestatements_reset
     | simplestatements_show
     | simplestatements_begin
+    | simplestatements_notify
+    | simplestatements_listen
+    | simplestatements_unlisten
 
 
 array_of[EXP] -> $EXP (%comma $EXP {% last %}):* {% ([head, tail]) => {
     return [unwrap(head), ...(tail.map(unwrap) || [])];
 } %}
 
+
+# NOTIFY / LISTEN / UNLISTEN — parsed; no-op in pg-mem (no async channels)
+simplestatements_notify -> kw_notify ident (comma string {% last %}):? {% x => track(x, {
+    type: 'notify',
+    channel: asName(x[1]),
+    ...(x[2] ? { payload: unbox(x[2]) } : {}),
+}) %}
+simplestatements_listen -> kw_listen ident {% x => track(x, { type: 'listen', channel: asName(x[1]) }) %}
+simplestatements_unlisten -> kw_unlisten (ident {% x => asName(x[0]) %} | %star {% () => '*' %}) {% x => track(x, {
+    type: 'unlisten',
+    channel: unwrap(x[1]),
+}) %}
 
 # https://www.postgresql.org/docs/12/sql-start-transaction.html
 simplestatements_start_transaction -> (kw_start kw_transaction) {% x => track(x, { type: 'start transaction' }) %}
@@ -154,7 +169,7 @@ comment_statement -> kw_comment %kw_on comment_what %kw_is string {% x => track(
         on: unwrap(x[2]),
     }) %}
 
-comment_what -> comment_what_col | comment_what_nm
+comment_what -> comment_what_col | comment_what_nm | comment_what_policy | comment_what_function
 
 comment_what_nm -> (%kw_table
                     | kw_materialized kw_view
@@ -167,6 +182,17 @@ comment_what_nm -> (%kw_table
 comment_what_col -> kw_column qcolumn {% x => track(x, {
                 type: 'column',
                 column: last(x),
+            }) %}
+
+comment_what_policy -> kw_policy ident %kw_on qualified_name {% x => track(x, {
+                type: 'policy',
+                policy: asName(x[1]),
+                name: x[3],
+            }) %}
+
+comment_what_function -> (kw_function | kw_procedure | kw_routine) grant_func {% x => track(x, {
+                type: 'function',
+                name: x[1],
             }) %}
 
 

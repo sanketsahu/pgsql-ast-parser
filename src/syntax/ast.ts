@@ -19,6 +19,9 @@ export type Statement = SelectStatement
     | UpdateStatement
     | MergeStatement
     | ShowStatement
+    | NotifyStatement
+    | ListenStatement
+    | UnlistenStatement
     | PrepareStatement
     | DeallocateStatement
     | ExecuteStatement
@@ -38,6 +41,8 @@ export type Statement = SelectStatement
     | SetTimezone
     | SetNames
     | CreateRoleStatement
+    | AlterRoleStatement
+    | AlterDefaultPrivilegesStatement
     | SetRoleStatement
     | ResetStatement
     | CreatePolicyStatement
@@ -97,6 +102,8 @@ export interface CreateFunctionStatement extends PGNode {
     purity?: 'immutable' | 'stable' | 'volatile';
     leakproof?: boolean;
     onNullInput?: 'call' | 'null' | 'strict';
+    /** SECURITY DEFINER / SECURITY INVOKER (default invoker) */
+    security?: 'definer' | 'invoker';
 }
 
 export interface DropFunctionStatement extends PGNode {
@@ -127,11 +134,15 @@ export interface CommentStatement extends PGNode {
      * But this is what's supported. File an issue if you want more.
      */
     on: {
-        type: 'table' | 'database' | 'index' | 'materialized view' | 'trigger' | 'type' | 'view';
+        type: 'table' | 'database' | 'index' | 'materialized view' | 'trigger' | 'type' | 'view' | 'function';
         name: QName;
     } | {
         type: 'column';
         column: QColumn;
+    } | {
+        type: 'policy';
+        policy: Name;
+        name: QName;
     };
 }
 
@@ -257,6 +268,22 @@ export interface Literal extends PGNode {
 export interface ShowStatement extends PGNode {
     type: 'show';
     variable: Name;
+}
+
+export interface NotifyStatement extends PGNode {
+    type: 'notify';
+    channel: Name;
+    payload?: string;
+}
+
+export interface ListenStatement extends PGNode {
+    type: 'listen';
+    channel: Name;
+}
+
+export interface UnlistenStatement extends PGNode {
+    type: 'unlisten';
+    channel: Name | '*';
 }
 
 export interface TruncateTableStatement extends PGNode {
@@ -488,6 +515,8 @@ export interface TableAlterationRowLevelSecurity extends PGNode {
 export interface AlterColumnSetType extends PGNode {
     type: 'set type';
     dataType: DataTypeDef;
+    /** the USING <expr> conversion, if any */
+    using?: Expr;
 }
 
 export interface AlterColumnSetDefault extends PGNode {
@@ -550,6 +579,8 @@ export interface CreateIndexStatement extends PGNode {
     indexName?: Name;
     tablespace?: string;
     with?: CreateIndexWith[];
+    /** INCLUDE (cols) — covering-index payload columns (parsed; not used for lookups) */
+    include?: Name[];
 }
 
 export interface CreateIndexWith extends PGNode {
@@ -1203,6 +1234,18 @@ export interface CreateRoleStatement extends PGNode {
     options: RoleOptions;
 }
 
+/** ALTER ROLE ... — parsed but a no-op (pg-mem has no role/config system) */
+export interface AlterRoleStatement extends PGNode {
+    type: 'alter role';
+    /** the role name, or 'all' for ALTER ROLE ALL */
+    role: Name | 'all';
+}
+
+/** ALTER DEFAULT PRIVILEGES ... — parsed but a no-op (pg-mem has no privilege system) */
+export interface AlterDefaultPrivilegesStatement extends PGNode {
+    type: 'alter default privileges';
+}
+
 export interface SetRoleStatement extends PGNode {
     type: 'set role';
     scope?: string;
@@ -1259,14 +1302,21 @@ export interface CreateTriggerStatement extends PGNode {
 }
 
 export interface GrantOnTarget extends PGNode {
-    type: 'table';
+    type: 'table' | 'schema' | 'database' | 'function' | 'sequence';
     names: QName[];
+}
+
+/** GRANT ... ON ALL {TABLES|SEQUENCES|FUNCTIONS|ROUTINES} IN SCHEMA ... */
+export interface GrantOnAllInSchema extends PGNode {
+    type: 'all in schema';
+    objectType: 'tables' | 'sequences' | 'functions' | 'routines';
+    schemas: QName[];
 }
 
 export interface GrantStatement extends PGNode {
     type: 'grant';
     privileges: 'all' | string[];
-    on: GrantOnTarget;
+    on: GrantOnTarget | GrantOnAllInSchema;
     to: Name[];
     withGrantOption?: boolean;
 }
@@ -1274,7 +1324,7 @@ export interface GrantStatement extends PGNode {
 export interface RevokeStatement extends PGNode {
     type: 'revoke';
     privileges: 'all' | string[];
-    on: GrantOnTarget;
+    on: GrantOnTarget | GrantOnAllInSchema;
     from: Name[];
     grantOptionFor?: boolean;
 }

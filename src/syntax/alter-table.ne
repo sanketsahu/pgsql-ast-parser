@@ -77,7 +77,11 @@ altertable_alter_column
     }) %}
 
 altercol
-    ->  (kw_set kw_data):? kw_type data_type {% x => track(x, { type: 'set type', dataType: unwrap(last(x)) }) %}
+    ->  (kw_set kw_data):? kw_type data_type (%kw_collate qname {% last %}):? (%kw_using expr {% last %}):? {% x => track(x, {
+            type: 'set type',
+            dataType: unwrap(x[2]),
+            ...(x[4] ? { using: unwrap(x[4]) } : {}),
+        }) %}
     | kw_set %kw_default expr {% x => track(x, {type: 'set default', default: unwrap(last(x)) }) %}
     | kw_drop %kw_default {% x => track(x, {type: 'drop default' }) %}
     | (kw_set | kw_drop) kw_not_null {% x => track(x, {type: toStr(x, ' ') }) %}
