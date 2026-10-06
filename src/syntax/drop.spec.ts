@@ -83,4 +83,29 @@ describe('Drop', () => {
         ifExists: true,
     });
 
+    checkStatement([`DROP VIEW IF EXISTS public.v CASCADE`], {
+        type: 'drop view',
+        names: [{ name: 'v', schema: 'public' }],
+        ifExists: true,
+        cascade: 'cascade',
+    });
+
+    checkStatement([`DROP MATERIALIZED VIEW mv`], {
+        type: 'drop materialized view',
+        names: [{ name: 'mv' }],
+    });
+
+    checkStatement([`DROP FUNCTION IF EXISTS f()`], {
+        type: 'drop function',
+        ifExists: true,
+        name: { name: 'f' },
+        arguments: [],
+    });
+
+    checkStatement([`DROP FUNCTION f(uuid) CASCADE`], {
+        type: 'drop function',
+        name: { name: 'f' },
+        arguments: [{ type: { name: 'uuid' } }],
+        cascade: 'cascade',
+    });
 });

@@ -28,6 +28,8 @@ drop_trigger_statement -> kw_drop kw_trigger kw_ifexists:? ident %kw_on qualifie
 
 drop_what
     -> %kw_table {% x => track(x, { type: 'drop table' }) %}
+    | kw_view {% x => track(x, { type: 'drop view' }) %}
+    | kw_materialized kw_view {% x => track(x, { type: 'drop materialized view' }) %}
     | kw_sequence {% x => track(x, { type: 'drop sequence' }) %}
     | kw_type {% x => track(x, { type: 'drop type' }) %}
     | (kw_role | %kw_user) {% x => track(x, { type: 'drop role' }) %}

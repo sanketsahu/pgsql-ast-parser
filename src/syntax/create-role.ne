@@ -30,7 +30,7 @@ alterrole_target
 
 alterrole_body
     -> kw_set ident (%kw_to | %op_eq) alterrole_setvals {% () => null %}
-    | kw_set ident kw_from kw_current {% () => null %}
+    | kw_set ident %kw_from kw_current {% () => null %}
     | kw_reset (ident | %kw_all) {% () => null %}
     | %kw_in kw_database ident kw_set ident (%kw_to | %op_eq) alterrole_setvals {% () => null %}
     | %kw_with:? role_option:* {% () => null %}

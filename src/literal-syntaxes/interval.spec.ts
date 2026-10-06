@@ -103,4 +103,7 @@ describe('Interval literals', () => {
         expect(intervalToString({ milliseconds: 1 })).to.equal('00:00:00.001');
         expect(intervalToString({ milliseconds: 10 })).to.equal('00:00:00.01');
     });
+    // a bare number is seconds
+    checkInterval(['0', ' 0 '], {});
+    checkInterval(['90'], { minutes: 1, seconds: 30 });
 });

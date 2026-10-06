@@ -885,6 +885,25 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
         if (c.security) {
             ret.push('SECURITY ', c.security.toUpperCase(), ' ');
         }
+        for (const st of c.settings ?? []) {
+            ret.push('SET ', name(st.name), ' ');
+            if (st.fromCurrent) {
+                ret.push('FROM CURRENT ');
+            } else if (st.value === 'default') {
+                ret.push('TO DEFAULT ');
+            } else {
+                ret.push('TO ', (st.value ?? []).map(v => /^[a-z_][a-z0-9_$]*$/.test(v) ? v : literal(v)).join(', '), ' ');
+            }
+        }
+        if (typeof c.cost === 'number') {
+            ret.push('COST ', String(c.cost), ' ');
+        }
+        if (typeof c.rows === 'number') {
+            ret.push('ROWS ', String(c.rows), ' ');
+        }
+        if (c.parallel) {
+            ret.push('PARALLEL ', c.parallel.toUpperCase(), ' ');
+        }
     },
 
 
@@ -905,6 +924,9 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
             }, true);
         }
         ret.push(' ');
+        if (d.cascade) {
+            ret.push(d.cascade.toUpperCase(), ' ');
+        }
     },
 
     with: w => {
@@ -1454,7 +1476,7 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
         const opts = c.parameters && Object.entries(c.parameters);
         if (opts?.length) {
             ret.push(' WITH ');
-            list(opts, ([k, v]) => ret.push(k, '=', v), false);
+            list(opts, ([k, v]) => ret.push(k, '=', v), true);
         }
         ret.push(' AS ');
         m.select(c.query);

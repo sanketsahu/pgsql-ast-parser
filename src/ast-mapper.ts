@@ -312,6 +312,8 @@ export class AstDefaultMapper implements IAstMapper {
             case 'drop sequence':
             case 'drop type':
             case 'drop role':
+            case 'drop view':
+            case 'drop materialized view':
                 return this.drop(val);
             case 'drop trigger':
                 return this.dropTrigger(val);

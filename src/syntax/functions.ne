@@ -16,6 +16,11 @@ create_func -> %kw_create
                 func_spec:+ {% (x, rej) => {
                     const specs: any = {};
                     for (const s of x[5]) {
+                        if (s.settings) {
+                            // SET clauses may repeat (one per parameter)
+                            specs.settings = [...(specs.settings ?? []), ...s.settings];
+                            continue;
+                        }
                         for (const k in s) {
                             if (k[0] !== '_' && k in specs) {
                                 throw new Error('conflicting or redundant options ' + k);
@@ -76,6 +81,22 @@ func_spec -> kw_language word {% x => track(x, { language: asName(last(x)) }) %}
          | (word {%kw('returns')%}) %kw_null oninp {% () => ({ onNullInput: 'null' }) %}
          | (word {%kw('strict')%})  {% () => ({ onNullInput: 'strict' }) %}
          | (word {%kw('external')%}):? (word {%kw('security')%}) (word {%kw('definer')%} | word {%kw('invoker')%}) {% x => track(x, { security: toStr(last(x)) }) %}
+         # SET search_path = public, extensions | SET search_path TO '' | SET x FROM CURRENT
+         | kw_set ident (%op_eq | %kw_to) func_set_values {% x => track(x, { settings: [{ name: asName(x[1]), value: x[3] }] }) %}
+         | kw_set ident %kw_from kw_current {% x => track(x, { settings: [{ name: asName(x[1]), fromCurrent: true }] }) %}
+         | (word {%kw('cost')%}) %float {% x => track(x, { cost: Number(toStr(last(x))) }) %}
+         | (word {%kw('cost')%}) int {% x => track(x, { cost: unwrap(last(x)) }) %}
+         | kw_rows int {% x => track(x, { rows: unwrap(last(x)) }) %}
+         | (word {%kw('parallel')%}) (word {%kw('safe')%} | word {%kw('unsafe')%} | word {%kw('restricted')%}) {% x => track(x, { parallel: toStr(last(x)) }) %}
+
+func_set_values -> %kw_default {% () => 'default' %}
+                | array_of[func_set_value] {% id %}
+
+func_set_value -> ident {% x => toStr(x) %}
+                | string {% x => toStr(x) %}
+                | int {% x => String(unwrap(x)) %}
+                | %kw_true {% () => 'true' %}
+                | %kw_false {% () => 'false' %}
 
 func_purity -> word {%kw('immutable')%}
             |  word {%kw('stable')%}
@@ -105,15 +126,18 @@ drop_func -> kw_drop
      kw_function
     (kw_if kw_exists):?
     qname
-    drop_func_overload:? {% x => track(x, {
+    drop_func_overload:?
+    (kw_cascade | kw_restrict):? {% x => track(x, {
         type: 'drop function',
         ...x[2] && {ifExists: true},
         name: x[3],
         ...x[4] && {arguments: x[4]},
+        ...x[5] && {cascade: toStr(x[5])},
     }) %}
 
 
-drop_func_overload -> lparen array_of[drop_func_overload_col] rparen {% get(1) %}
+# f() names the zero-argument overload
+drop_func_overload -> lparen array_of[drop_func_overload_col]:? rparen {% x => x[1] ?? [] %}
 
 drop_func_overload_col -> word:? qname {% x => track(x, {
     type: x[1],

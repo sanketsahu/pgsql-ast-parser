@@ -184,4 +184,13 @@ describe('Create view statements', () => {
 
     checkInvalid(`create view myview as select * from tbl with data`);
     checkInvalid(`create or replace materialized view myview as select * from tbl with data`);
+    checkStatement([`create view v with (security_invoker = true, security_barrier) as select 1`], {
+        type: 'create view',
+        name: { name: 'v' },
+        parameters: { security_invoker: 'true', security_barrier: 'true' },
+        query: {
+            type: 'select',
+            columns: [{ expr: { type: 'integer', value: 1 } }],
+        },
+    });
 });
