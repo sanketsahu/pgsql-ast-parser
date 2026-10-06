@@ -1214,6 +1214,8 @@ export interface ExprNumeric extends PGNode {
     value: number;
     /** exact source text, present for fractional/exponent literals */
     valueText?: string;
+    /** the literal exactly as written, when it differs from valueText (trailing zeros: 0.30); non-enumerable */
+    readonly raw?: string;
 }
 
 export interface ExprString extends PGNode {
@@ -1312,6 +1314,8 @@ export interface TriggerEvent {
 export interface CreateTriggerStatement extends PGNode {
     type: 'create trigger';
     name: Name;
+    /** CREATE OR REPLACE TRIGGER (postgres 14+) */
+    orReplace?: boolean;
     constraint?: boolean;
     timing: 'before' | 'after' | 'instead of';
     events: TriggerEvent[];

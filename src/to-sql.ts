@@ -1659,7 +1659,7 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
     },
 
     createTrigger: t => {
-        ret.push('CREATE ', t.constraint ? 'CONSTRAINT ' : '', 'TRIGGER ', name(t.name), ' ', t.timing.toUpperCase(), ' ');
+        ret.push('CREATE ', t.orReplace ? 'OR REPLACE ' : '', t.constraint ? 'CONSTRAINT ' : '', 'TRIGGER ', name(t.name), ' ', t.timing.toUpperCase(), ' ');
         ret.push(t.events.map(e => e.event.toUpperCase() + (e.columns ? ' OF ' + e.columns.map(name).join(', ') : '')).join(' OR '));
         ret.push(' ON ');
         visitQualifiedName(t.table);

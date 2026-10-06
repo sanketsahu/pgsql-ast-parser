@@ -1,6 +1,6 @@
 {
   "name": "@tinbase/pgsql-ast-parser",
-  "version": "12.1.0",
+  "version": "12.2.0",
   "description": "Fork of pgsql-ast-parser with extended grammar (dollar-quoted strings, array slicing, GRANT/roles, triggers, MERGE, partitioning, ...). Tracks oguimbal/pgsql-ast-parser; pending upstream PR #174.",
   "main": "index.js",
   "repository": "https://github.com/sanketsahu/pgsql-ast-parser",

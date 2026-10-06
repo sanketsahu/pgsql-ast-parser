@@ -48,4 +48,14 @@ describe('Create trigger', () => {
         forEach: 'row',
         execute: { function: { name: 'f' }, arguments: [] },
     });
+    checkStatement(`create or replace trigger t after insert on orders for each row execute function f()`, {
+        type: 'create trigger',
+        orReplace: true,
+        name: { name: 't' },
+        timing: 'after',
+        events: [{ event: 'insert' }],
+        table: { name: 'orders' },
+        forEach: 'row',
+        execute: { function: { name: 'f' }, arguments: [] },
+    });
 });
