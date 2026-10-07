@@ -1036,12 +1036,16 @@ export type AdditiveOperator = '||' | '-' | '#-' | '&&' | '+';
 export type MultiplicativeOperator = '*' | '%' | '/';
 export type ConstructOperator = 'AT TIME ZONE';
 export type BinaryOperator = LogicOperator
+    | JsonMemberOperator
     | EqualityOperator
     | ComparisonOperator
     | AdditiveOperator
     | MultiplicativeOperator
     | MathOpsBinary
     | ConstructOperator;
+
+/** json -> / ->> with a non-literal key (a literal key parses as an ExprMember) */
+export type JsonMemberOperator = '->' | '->>';
 
 export interface ExprBinary extends PGNode {
     type: 'binary';

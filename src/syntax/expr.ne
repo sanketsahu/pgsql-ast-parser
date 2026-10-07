@@ -125,6 +125,14 @@ expr_member
             op: x[1],
             member: unwrap(x[2])
         }) %}
+    # json -> <column, variable, call or (expression)>: postgres takes any expression as the key.
+    # A literal key stays a 'member' node; anything else is the binary operator it really is.
+    | (expr_member | expr_paren) ops_member member_key {% x => track(x, {
+            type: 'binary',
+            left: unwrap(x[0]),
+            op: x[1],
+            right: unwrap(x[2]),
+        }) %}
     | (expr_member | expr_paren) %op_cast data_type {% x => track(x, {
             type: 'cast',
             operand: unwrap(x[0]),
@@ -319,6 +327,12 @@ ops_like_operators
 ops_in -> %kw_not:? %kw_in
 ops_between -> %kw_not:? kw_between # {% x => x[0] ? `${x[0][0].value} ${x[1].value}`.toUpperCase() : x[1].value %}
 ops_member -> (%op_member | %op_membertext) {% x => unwrap(x)?.value %}
+
+member_key
+    -> word {% x => track(x, { type: 'ref', name: unwrap(x[0]) }) %}
+    | word %dot word {% x => track(x, { type: 'ref', table: { name: unwrap(x[0]) }, name: unwrap(x[2]) }) %}
+    | expr_call {% unwrap %}
+    | expr_paren {% unwrap %}
 
 # x,y,z
 expr_list_item -> expr_or_select {% unwrap %} | expr_star {% unwrap %}
