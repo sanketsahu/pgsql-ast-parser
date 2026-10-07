@@ -221,6 +221,40 @@ line`,
             }
         });
 
+        // a non-literal key: postgres takes any expression after -> / ->>
+        checkTreeExpr([`a->k`, `a -> k`], {
+            type: 'binary',
+            op: '->',
+            left: { type: 'ref', name: 'a' },
+            right: { type: 'ref', name: 'k' },
+        });
+
+        checkTreeExpr([`tc.credits ->> t.key`], {
+            type: 'binary',
+            op: '->>',
+            left: { type: 'ref', name: 'credits', table: { name: 'tc' } },
+            right: { type: 'ref', name: 'key', table: { name: 't' } },
+        });
+
+        checkTreeExpr([`a -> (i + 1)`], {
+            type: 'binary',
+            op: '->',
+            left: { type: 'ref', name: 'a' },
+            right: { type: 'binary', op: '+', left: { type: 'ref', name: 'i' }, right: { type: 'integer', value: 1 } },
+        });
+
+        checkTreeExpr([`a -> k ->> 'x'`], {
+            type: 'member',
+            op: '->>',
+            member: 'x',
+            operand: {
+                type: 'binary',
+                op: '->',
+                left: { type: 'ref', name: 'a' },
+                right: { type: 'ref', name: 'k' },
+            },
+        });
+
         checkTreeExpr([`t.a->'b'`, `t."a" -> 'b'`], {
             type: 'member',
             op: '->',
