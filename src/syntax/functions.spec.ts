@@ -56,6 +56,46 @@ describe('Create function', () => {
         security: 'invoker',
     });
 
+    // Supabase's recommended shape for a SECURITY DEFINER function: pin search_path
+    checkStatement(`create or replace function public.handle_new_user() returns trigger
+        language plpgsql security definer set search_path = public as $$ begin return new; end $$`, {
+        type: 'create function',
+        orReplace: true,
+        name: { name: 'handle_new_user', schema: 'public' },
+        arguments: [],
+        code: 'begin return new; end',
+        language: { name: 'plpgsql' },
+        returns: { name: 'trigger' },
+        security: 'definer',
+        settings: [{ name: { name: 'search_path' }, value: ['public'] }],
+    });
+
+    checkStatement(`CREATE FUNCTION f() RETURNS int LANGUAGE sql SET search_path TO '' SET search_path = pg_catalog, public COST 10 ROWS 5 PARALLEL SAFE AS 'select 1'`, {
+        type: 'create function',
+        name: { name: 'f' },
+        arguments: [],
+        code: 'select 1',
+        language: { name: 'sql' },
+        returns: { name: 'int' },
+        settings: [
+            { name: { name: 'search_path' }, value: [''] },
+            { name: { name: 'search_path' }, value: ['pg_catalog', 'public'] },
+        ],
+        cost: 10,
+        rows: 5,
+        parallel: 'safe',
+    });
+
+    checkStatement(`CREATE FUNCTION f() RETURNS int LANGUAGE sql SET search_path FROM CURRENT AS 'select 1'`, {
+        type: 'create function',
+        name: { name: 'f' },
+        arguments: [],
+        code: 'select 1',
+        language: { name: 'sql' },
+        returns: { name: 'int' },
+        settings: [{ name: { name: 'search_path' }, fromCurrent: true }],
+    });
+
     // modifiers BEFORE code block
     checkStatement(`CREATE FUNCTION add(integer, integer) RETURNS integer stable
     LANGUAGE SQL RETURNS NULL ON NULL INPUT

@@ -393,6 +393,12 @@ line`,
             }
         });
 
+        it('keeps the literal as written, non-enumerably', () => {
+            const e: any = parse('0.30', 'expr');
+            expect(e.raw).to.equal('0.30');
+            expect(Object.keys(e)).not.to.include('raw');
+        });
+
         checkTreeExpr(['42.', '42.0'], {
             type: 'numeric',
             value: 42,

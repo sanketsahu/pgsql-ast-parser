@@ -101,9 +101,17 @@
         const n = parseFloat(text);
         // a fractional/exponent literal may not round-trip through a JS double, so keep
         // the exact (canonical) source text for arbitrary-precision numeric consumers
-        return /[.eE]/.test(text)
-            ? { type: 'numeric', value: n, valueText: canonNumeric(text) }
-            : { type: 'numeric', value: n };
+        if (!/[.eE]/.test(text)) {
+            return { type: 'numeric', value: n };
+        }
+        const valueText = canonNumeric(text);
+        const ret = { type: 'numeric', value: n, valueText };
+        if (valueText !== text) {
+            // the literal as written (0.30, 1.0) - what postgres echoes back, e.g. as a column
+            // default. Non-enumerable: equivalent spellings must still parse to equal ASTs.
+            Object.defineProperty(ret, 'raw', { value: text, enumerable: false });
+        }
+        return ret;
     }
 
     function fromEntries(vals: [string, any][]): any {

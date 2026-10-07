@@ -37,9 +37,19 @@ create_view -> %kw_create
 
 
 
-create_view_opt -> ident %op_eq ident {% ([a, _, b]) => [toStr(a), toStr(b)] %}
+create_view_opt -> ident %op_eq create_view_opt_value {% ([a, _, b]) => [toStr(a), b] %}
+                | ident {% ([a]) => [toStr(a), 'true'] %}
 
+create_view_opt_value -> ident {% x => toStr(x) %}
+                | %kw_true {% () => 'true' %}
+                | %kw_false {% () => 'false' %}
+                | %kw_on {% () => 'on' %}
+                | string {% x => toStr(x) %}
+                | int {% x => String(unwrap(x)) %}
+
+# WITH (security_invoker = true) - the parenthesized form is postgres' syntax
 create_view_opts -> %kw_with array_of[create_view_opt] {% last %}
+                | %kw_with lparen array_of[create_view_opt] rparen {% get(2) %}
 
 
 # https://www.postgresql.org/docs/current/sql-creatematerializedview.html

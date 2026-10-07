@@ -102,6 +102,11 @@ export interface CreateFunctionStatement extends PGNode {
     purity?: 'immutable' | 'stable' | 'volatile';
     leakproof?: boolean;
     onNullInput?: 'call' | 'null' | 'strict';
+    /** SET configuration_parameter { TO | = } value | FROM CURRENT, e.g. SET search_path = public */
+    settings?: FunctionSetting[];
+    cost?: number;
+    rows?: number;
+    parallel?: 'safe' | 'unsafe' | 'restricted';
     /** SECURITY DEFINER / SECURITY INVOKER (default invoker) */
     security?: 'definer' | 'invoker';
 }
@@ -111,6 +116,14 @@ export interface DropFunctionStatement extends PGNode {
     ifExists?: boolean;
     name: QName;
     arguments?: { name?: Name; type: DataTypeDef }[];
+    cascade?: 'cascade' | 'restrict';
+}
+
+export interface FunctionSetting {
+    name: Name;
+    /** the value list, or 'default' */
+    value?: string[] | 'default';
+    fromCurrent?: boolean;
 }
 
 export interface ReturnsTable extends PGNode {
@@ -294,7 +307,7 @@ export interface TruncateTableStatement extends PGNode {
 }
 
 export interface DropStatement extends PGNode {
-    type: 'drop table' | 'drop sequence' | 'drop index' | 'drop type' | 'drop role';
+    type: 'drop table' | 'drop sequence' | 'drop index' | 'drop type' | 'drop role' | 'drop view' | 'drop materialized view';
     names: QName[];
     ifExists?: boolean;
     cascade?: 'cascade' | 'restrict';
@@ -1201,6 +1214,8 @@ export interface ExprNumeric extends PGNode {
     value: number;
     /** exact source text, present for fractional/exponent literals */
     valueText?: string;
+    /** the literal exactly as written, when it differs from valueText (trailing zeros: 0.30); non-enumerable */
+    readonly raw?: string;
 }
 
 export interface ExprString extends PGNode {
@@ -1299,6 +1314,8 @@ export interface TriggerEvent {
 export interface CreateTriggerStatement extends PGNode {
     type: 'create trigger';
     name: Name;
+    /** CREATE OR REPLACE TRIGGER (postgres 14+) */
+    orReplace?: boolean;
     constraint?: boolean;
     timing: 'before' | 'after' | 'instead of';
     events: TriggerEvent[];

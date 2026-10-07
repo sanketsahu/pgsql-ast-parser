@@ -3,7 +3,8 @@
 @include "expr.ne"
 
 # https://www.postgresql.org/docs/current/sql-createtrigger.html
-createtrigger_statement -> %kw_create (%kw_constraint {% () => true %}):? kw_trigger ident
+# CREATE OR REPLACE TRIGGER is postgres 14+
+createtrigger_statement -> %kw_create (%kw_or kw_replace {% () => true %}):? (%kw_constraint {% () => true %}):? kw_trigger ident
             trigger_timing
             trigger_events
             %kw_on qualified_name
@@ -12,16 +13,17 @@ createtrigger_statement -> %kw_create (%kw_constraint {% () => true %}):? kw_tri
             kw_execute (kw_function | kw_procedure) qualified_name lparen expr_list_raw:? rparen
             {% x => track(x, {
                 type: 'create trigger',
-                ...(x[1] ? { constraint: true } : {}),
-                name: asName(x[3]),
-                timing: x[4],
-                events: x[5],
-                table: x[7],
-                forEach: x[8] ?? 'statement',
-                ...(x[9] ? { when: unwrap(x[9]) } : {}),
+                ...(x[1] ? { orReplace: true } : {}),
+                ...(x[2] ? { constraint: true } : {}),
+                name: asName(x[4]),
+                timing: x[5],
+                events: x[6],
+                table: x[8],
+                forEach: x[9] ?? 'statement',
+                ...(x[10] ? { when: unwrap(x[10]) } : {}),
                 execute: {
-                    function: x[12],
-                    arguments: x[14] ?? [],
+                    function: x[13],
+                    arguments: x[15] ?? [],
                 },
             }) %}
 
