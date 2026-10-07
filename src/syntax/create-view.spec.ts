@@ -193,4 +193,31 @@ describe('Create view statements', () => {
             columns: [{ expr: { type: 'integer', value: 1 } }],
         },
     });
+    checkStatement([`create view v with (security_invoker = on) as select 1`, `create view v with (security_invoker=on) as select 1`], {
+        type: 'create view',
+        name: { name: 'v' },
+        parameters: { security_invoker: 'on' },
+        query: {
+            type: 'select',
+            columns: [{ expr: { type: 'integer', value: 1 } }],
+        },
+    });
+    checkStatement([`create view v with (security_invoker = off) as select 1`], {
+        type: 'create view',
+        name: { name: 'v' },
+        parameters: { security_invoker: 'off' },
+        query: {
+            type: 'select',
+            columns: [{ expr: { type: 'integer', value: 1 } }],
+        },
+    });
+    checkStatement([`create materialized view mv with (fillfactor = 70) as select 1`], {
+        type: 'create materialized view',
+        name: { name: 'mv' },
+        parameters: { fillfactor: '70' },
+        query: {
+            type: 'select',
+            columns: [{ expr: { type: 'integer', value: 1 } }],
+        },
+    });
 });

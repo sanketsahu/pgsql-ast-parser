@@ -106,4 +106,5 @@ describe('Interval literals', () => {
     // a bare number is seconds
     checkInterval(['0', ' 0 '], {});
     checkInterval(['90'], { minutes: 1, seconds: 30 });
+    checkInterval(['+90', ' +90 '], { minutes: 1, seconds: 30 });
 });

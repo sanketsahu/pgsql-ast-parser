@@ -43,6 +43,7 @@ create_view_opt -> ident %op_eq create_view_opt_value {% ([a, _, b]) => [toStr(a
 create_view_opt_value -> ident {% x => toStr(x) %}
                 | %kw_true {% () => 'true' %}
                 | %kw_false {% () => 'false' %}
+                | %kw_on {% () => 'on' %}
                 | string {% x => toStr(x) %}
                 | int {% x => String(unwrap(x)) %}
 

@@ -115,7 +115,7 @@ export function parseIntervalLiteral(literal: string): Interval {
     // a bare number is a count of seconds: interval '0' = 00:00:00, interval '90' = 00:01:30
     const bare = /^\s*([+-]?(?:\d+\.?\d*|\.\d+))\s*$/.exec(literal);
     if (bare) {
-        return parseIntervalLiteral(`${bare[1]} seconds`);
+        return parseIntervalLiteral(`${bare[1].replace(/^\+/, '')} seconds`);
     }
     if (literal.startsWith('P')) {
         if (!intervalIsoCompiled) {

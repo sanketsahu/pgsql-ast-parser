@@ -1497,7 +1497,7 @@ const visitor = astVisitor<IAstFullVisitor>(m => ({
         const opts = c.parameters && Object.entries(c.parameters);
         if (opts?.length) {
             ret.push(' WITH ');
-            list(opts, ([k, v]) => ret.push(k, '=', v), false);
+            list(opts, ([k, v]) => ret.push(k, '=', v), true);
         }
         if (c.tablespace) {
             ret.push(' TABLESPACE ', name(c.tablespace));
